@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.Region?>
 
 <BorderPane xmlns="http://javafx.com/javafx/17" 
-            xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.investtrack.view.MainController">
+            xmlns:fx="http://javafx.com/fxml/1">
     <top>
         <ToolBar>
             <items>
