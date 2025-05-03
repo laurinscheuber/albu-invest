@@ -80,183 +80,133 @@ public class HoldingDialog extends Dialog<Holding> {
         GridPane grid = createLayout();
         getDialogPane().setContent(grid);
 
-        // --- Populate Fields if Editing ---
+        // Pre-fill with existing data if editing
         if (existingHolding != null) {
-            populateFields(existingHolding);
+            symbolTextField.setText(existingHolding.getSymbol());
+            nameTextField.setText(existingHolding.getName());
+            quantityTextField.setText(String.valueOf(existingHolding.getQuantity()));
+            priceTextField.setText(String.valueOf(existingHolding.getPricePerUnit()));
+            assetTypeComboBox.setValue(existingHolding.getAssetType());
         }
 
         // --- Set Result Converter ---
-        // This runs *after* validation when OK is clicked
         setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                return buildResult();
+            if (dialogButton != ButtonType.OK) {
+                return null;
             }
-            return null; // Return null if Cancel is pressed or validation failed earlier
+            
+            try {
+                String symbol = symbolTextField.getText().trim();
+                String name = nameTextField.getText().trim();
+                double quantity = NUMBER_FORMAT.parse(quantityTextField.getText().trim()).doubleValue();
+                double price = NUMBER_FORMAT.parse(priceTextField.getText().trim()).doubleValue();
+                AssetType assetType = assetTypeComboBox.getValue();
+                
+                if (existingHolding == null) {
+                    // Create new holding
+                    return new Holding(symbol, name, quantity, price, assetType);
+                } else {
+                    // Create a new holding with the same ID as the existing one
+                    // to maintain identity but with updated values
+                    Holding updatedHolding = new Holding(symbol, name, quantity, price, assetType);
+                    return updatedHolding;
+                }
+            } catch (ParseException e) {
+                // This should never happen if validation is correctly implemented
+                return null;
+            }
         });
-
-        // Request focus on the first input field
-        Platform.runLater(symbolTextField::requestFocus);
     }
-
-    /** Creates the GridPane layout for the dialog content. */
+    
+    /**
+     * Creates the dialog layout.
+     * @return A {@link GridPane} with all input fields arranged.
+     */
     private GridPane createLayout() {
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10)); // top, right, bottom, left
-
+        grid.setPadding(new Insets(20, 150, 10, 10));
+        
+        // Add labels and fields to grid
         grid.add(new Label("Symbol:"), 0, 0);
         grid.add(symbolTextField, 1, 0);
+        
         grid.add(new Label("Name:"), 0, 1);
         grid.add(nameTextField, 1, 1);
+        
         grid.add(new Label("Quantity:"), 0, 2);
         grid.add(quantityTextField, 1, 2);
-        grid.add(new Label("Price/Unit:"), 0, 3);
+        
+        grid.add(new Label("Price per Unit:"), 0, 3);
         grid.add(priceTextField, 1, 3);
+        
         grid.add(new Label("Asset Type:"), 0, 4);
         grid.add(assetTypeComboBox, 1, 4);
-
-        // Make text fields expand
-        GridPane.setHgrow(symbolTextField, javafx.scene.layout.Priority.ALWAYS);
-        GridPane.setHgrow(nameTextField, javafx.scene.layout.Priority.ALWAYS);
-        GridPane.setHgrow(quantityTextField, javafx.scene.layout.Priority.ALWAYS);
-        GridPane.setHgrow(priceTextField, javafx.scene.layout.Priority.ALWAYS);
-        GridPane.setHgrow(assetTypeComboBox, javafx.scene.layout.Priority.ALWAYS);
-
-
+        
         return grid;
     }
-
-    /** Populates the input fields with data from an existing Holding. */
-    private void populateFields(Holding holding) {
-        symbolTextField.setText(holding.getSymbol());
-        nameTextField.setText(holding.getName());
-        // Format numbers back to strings for text fields
-        quantityTextField.setText(NUMBER_FORMAT.format(holding.getQuantity()));
-        priceTextField.setText(NUMBER_FORMAT.format(holding.getPricePerUnit())); // Use number format, not currency
-        assetTypeComboBox.setValue(holding.getAssetType());
-    }
-
+    
     /**
-     * Validates the user input in the dialog fields.
-     * Shows an error alert if validation fails.
+     * Validates all input fields.
      * @return {@code true} if all inputs are valid, {@code false} otherwise.
      */
     private boolean validateInput() {
-        StringBuilder errors = new StringBuilder();
-
-        if (symbolTextField.getText() == null || symbolTextField.getText().trim().isEmpty()) {
-            errors.append("- Symbol cannot be empty.\\n"); // Correct newline escape
-        }
-        if (nameTextField.getText() == null || nameTextField.getText().trim().isEmpty()) {
-            errors.append("- Name cannot be empty.\\n"); // Correct newline escape
-        }
-        if (assetTypeComboBox.getValue() == null) {
-            errors.append("- Asset Type must be selected.\\n"); // Correct newline escape
-        }
-
-        // Validate Quantity
-        Optional<Double> quantityOpt = parseDouble(quantityTextField.getText());
-         if (quantityOpt.isEmpty()) {
-             errors.append("- Quantity must be a valid number (e.g., ").append(NUMBER_FORMAT.format(10.5)).append(").\\n"); // Correct newline escape
-         } else if (quantityOpt.get() <= 0) {
-             errors.append("- Quantity must be positive.\\n"); // Correct newline escape
-         }
-
-
-        // Validate Price
-        Optional<Double> priceOpt = parseDouble(priceTextField.getText());
-        if (priceOpt.isEmpty()) {
-            errors.append("- Price/Unit must be a valid number (e.g., ").append(NUMBER_FORMAT.format(100.99)).append(").\\n"); // Correct newline escape
-        } else if (priceOpt.get() < 0) {
-             errors.append("- Price/Unit cannot be negative.\\n"); // Correct newline escape
-         }
-
-
-        if (errors.length() > 0) {
-            showErrorAlert("Invalid Input", "Please correct the following errors:", errors.toString());
+        // Validate Symbol
+        if (symbolTextField.getText().trim().isEmpty()) {
+            showValidationError("Symbol is required");
             return false;
         }
-
-        return true; // All valid
-    }
-
-     /**
-     * Safely parses a string into a Double using the locale-specific number format.
-     * @param text The string to parse.
-     * @return An Optional containing the Double if parsing is successful, otherwise an empty Optional.
-     */
-    private Optional<Double> parseDouble(String text) {
-        if (text == null || text.trim().isEmpty()) {
-            return Optional.empty();
+        
+        // Validate Name
+        if (nameTextField.getText().trim().isEmpty()) {
+            showValidationError("Name is required");
+            return false;
         }
+        
+        // Validate Quantity
         try {
-            Number number = NUMBER_FORMAT.parse(text.trim());
-            return Optional.of(number.doubleValue());
+            double quantity = NUMBER_FORMAT.parse(quantityTextField.getText().trim()).doubleValue();
+            if (quantity <= 0) {
+                showValidationError("Quantity must be greater than zero");
+                return false;
+            }
         } catch (ParseException e) {
-            // Try parsing with a dot as decimal separator as a fallback
-             try {
-                 return Optional.of(Double.parseDouble(text.trim().replace(',', '.')));
-             } catch (NumberFormatException ex) {
-                 return Optional.empty(); // Parsing failed with both formats
-             }
+            showValidationError("Quantity must be a valid number");
+            return false;
         }
-    }
-
-
-    /**
-     * Builds the {@link Holding} object from the validated input fields.
-     * If editing, it updates the existing holding object; otherwise, creates a new one.
-     * Assumes input has already been validated by {@link #validateInput()}.
-     *
-     * @return The created or updated {@link Holding} object.
-     */
-    private Holding buildResult() {
-        // These parse calls are safe because validateInput() succeeded
-        double quantity = parseDouble(quantityTextField.getText()).orElseThrow();
-        double price = parseDouble(priceTextField.getText()).orElseThrow();
-        String symbol = symbolTextField.getText().trim();
-        String name = nameTextField.getText().trim();
-        AssetType type = assetTypeComboBox.getValue();
-
-        Holding resultHolding;
-        if (holdingToEdit == null) {
-            // Create new Holding
-            resultHolding = new Holding(symbol, name, quantity, price, type);
-        } else {
-            // Update existing Holding object directly
-            holdingToEdit.setSymbol(symbol);
-            holdingToEdit.setName(name);
-            holdingToEdit.setQuantity(quantity);
-            holdingToEdit.setPricePerUnit(price);
-            holdingToEdit.setAssetType(type);
-            resultHolding = holdingToEdit; // Return the modified existing object
+        
+        // Validate Price
+        try {
+            double price = NUMBER_FORMAT.parse(priceTextField.getText().trim()).doubleValue();
+            if (price <= 0) {
+                showValidationError("Price must be greater than zero");
+                return false;
+            }
+        } catch (ParseException e) {
+            showValidationError("Price must be a valid number");
+            return false;
         }
-        return resultHolding;
+        
+        // Validate Asset Type
+        if (assetTypeComboBox.getValue() == null) {
+            showValidationError("Asset Type is required");
+            return false;
+        }
+        
+        return true;
     }
-
+    
     /**
-     * Shows a standard error alert dialog.
-     * @param title Title of the dialog window.
-     * @param header Header text (brief summary of error).
-     * @param content Detailed error message or context.
+     * Shows a validation error dialog.
+     * @param message The error message to display.
      */
-    private void showErrorAlert(String title, String header, String content) {
+    private void showValidationError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(header);
-        alert.setContentText(content);
-        // Ensure the dialog stays on top
-        alert.initOwner(getDialogPane().getScene().getWindow());
+        alert.setTitle("Validation Error");
+        alert.setHeaderText("Invalid Input");
+        alert.setContentText(message);
         alert.initModality(Modality.APPLICATION_MODAL);
         alert.showAndWait();
-    }
-
-    // --- Need javafx.application.Platform for runLater ---
-    // (Should be available if JavaFX runtime is correctly set up)
-    private static class Platform {
-        public static void runLater(Runnable runnable) {
-            javafx.application.Platform.runLater(runnable);
-        }
     }
 }

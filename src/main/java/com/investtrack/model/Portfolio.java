@@ -1,6 +1,14 @@
 package com.investtrack.model;
 
-import java.util.ArrayList;
+    public Portfolio() {
+        this.holdings = new ArrayList<>();
+        this.cashBalance = INITIAL_CASH_BALANCE; // Set initial cash balance
+        this.totalInvested = 0.0;
+        this.performanceHistory = new ArrayList<>();
+        
+        // Add initial snapshot
+        snapshotPerformance();
+    }va.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +27,12 @@ public class Portfolio {
     
     /** The initial cash balance for resets. */
     private static final double INITIAL_CASH_BALANCE = 100_000_000.0; // 100 million
+    
+    /** The total amount invested (total purchase value of all holdings) */
+    private double totalInvested;
+    
+    /** History of portfolio values for performance tracking */
+    private final List<PortfolioSnapshot> performanceHistory;
 
     /**
      * Constructs a new, empty Portfolio.
@@ -27,6 +41,11 @@ public class Portfolio {
     public Portfolio() {
         this.holdings = new ArrayList<>();
         this.cashBalance = INITIAL_CASH_BALANCE; // Set initial cash balance
+        this.totalInvested = 0.0;
+        this.performanceHistory = new ArrayList<>();
+        
+        // Add initial snapshot
+        takeSnapshot();
     }
 
     /**
@@ -157,5 +176,38 @@ public class Portfolio {
      */
     public void addCash(double amount) {
         cashBalance += amount;
+    }
+    
+    /**
+     * Gets the total amount invested in the portfolio.
+     * @return The total invested amount.
+     */
+    public double getTotalInvested() {
+        return totalInvested;
+    }
+    
+    /**
+     * Updates the total invested amount (e.g., when adding or removing holdings).
+     * @param amount The amount to add or subtract.
+     */
+    public void updateTotalInvested(double amount) {
+        this.totalInvested += amount;
+    }
+    
+    /**
+     * Takes a snapshot of the current portfolio state for performance tracking.
+     * This could be called at regular intervals or after significant changes.
+     */
+    public void snapshotPerformance() {
+        double totalValue = getTotalValue();
+        performanceHistory.add(new PortfolioSnapshot(totalValue, cashBalance));
+    }
+    
+    /**
+     * Gets the performance history of the portfolio.
+     * @return A list of {@link PortfolioSnapshot} representing the performance history.
+     */
+    public List<PortfolioSnapshot> getPerformanceHistory() {
+        return Collections.unmodifiableList(performanceHistory);
     }
 }

@@ -1016,7 +1016,7 @@ public class MainController {
      */
     @FXML
     public void add() {
-        Dialog<Holding> dialog = new HoldingDialog(null);
+        Dialog<Holding> dialog = new HoldingDialog();
         Optional<Holding> result = dialog.showAndWait();
         
         result.ifPresent(newHolding -> {
