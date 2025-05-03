@@ -2,17 +2,25 @@ package com.investtrack.persistence;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 import com.google.gson.JsonSyntaxException;
-import com.investtrack.model.Holding; // Import Holding if needed for specific type adapters
 import com.investtrack.model.Portfolio;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Handles the persistence (saving and loading) of the {@link Portfolio} object
@@ -22,9 +30,26 @@ public class PortfolioRepository {
 
     /** Gson instance configured for pretty printing JSON output. */
     private static final Gson GSON = new GsonBuilder()
-            // .registerTypeAdapter(Holding.class, new HoldingTypeAdapter()) // Example if custom adapter needed
             .setPrettyPrinting() // Makes the JSON file human-readable
+            .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
             .create();
+            
+    /**
+     * Custom type adapter for LocalDateTime to handle serialization and deserialization properly.
+     */
+    private static class LocalDateTimeAdapter implements JsonSerializer<LocalDateTime>, JsonDeserializer<LocalDateTime> {
+        private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        
+        @Override
+        public JsonElement serialize(LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {
+            return new JsonPrimitive(FORMATTER.format(src));
+        }
+        
+        @Override
+        public LocalDateTime deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) {
+            return LocalDateTime.parse(json.getAsString(), FORMATTER);
+        }
+    }
 
     /** The file path where the portfolio data is stored. */
     private final Path portfolioFilePath;

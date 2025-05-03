@@ -1,14 +1,6 @@
 package com.investtrack.model;
 
-    public Portfolio() {
-        this.holdings = new ArrayList<>();
-        this.cashBalance = INITIAL_CASH_BALANCE; // Set initial cash balance
-        this.totalInvested = 0.0;
-        this.performanceHistory = new ArrayList<>();
-        
-        // Add initial snapshot
-        snapshotPerformance();
-    }va.util.ArrayList;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -70,6 +62,9 @@ public class Portfolio {
             // Optional: Check if a holding with the same ID already exists
             if (holdings.stream().noneMatch(h -> h.getId().equals(holding.getId()))) {
                  this.holdings.add(holding);
+                 // Update total invested
+                 this.totalInvested += holding.getPricePerUnit() * holding.getQuantity();
+                 takeSnapshot();
             } else {
                 // Handle duplicate ID case if necessary (e.g., log warning, throw exception)
                 System.err.println("Warning: Attempted to add a holding with duplicate ID: " + holding.getId());
@@ -88,7 +83,11 @@ public class Portfolio {
             return false;
         }
         // Remove based on object equality (uses Holding.equals, which checks ID)
-        return this.holdings.remove(holding);
+        boolean removed = this.holdings.remove(holding);
+        if (removed) {
+            takeSnapshot();
+        }
+        return removed;
     }
 
     /**
@@ -101,7 +100,11 @@ public class Portfolio {
          if (holdingId == null || holdingId.trim().isEmpty()) {
             return false;
         }
-        return this.holdings.removeIf(h -> h.getId().equals(holdingId));
+        boolean removed = this.holdings.removeIf(h -> h.getId().equals(holdingId));
+        if (removed) {
+            takeSnapshot();
+        }
+        return removed;
     }
 
 
@@ -132,12 +135,38 @@ public class Portfolio {
                        .mapToDouble(Holding::getCurrentValue) // Use method reference
                        .sum();
     }
+    
+    /**
+     * Calculates the total assets value (holdings value + cash balance).
+     * @return The total assets value
+     */
+    public double getTotalAssetValue() {
+        return getTotalValue() + cashBalance;
+    }
+    
+    /**
+     * Calculates the profit or loss in CHF.
+     * @return The profit/loss amount (positive for profit, negative for loss)
+     */
+    public double getProfitLoss() {
+        return getTotalAssetValue() - INITIAL_CASH_BALANCE;
+    }
+    
+    /**
+     * Calculates the profit or loss as a percentage of the initial capital.
+     * @return The profit/loss percentage
+     */
+    public double getProfitLossPercentage() {
+        return (getProfitLoss() / INITIAL_CASH_BALANCE) * 100;
+    }
 
     /**
      * Clears all holdings from the portfolio.
      */
     public void clear() {
         this.holdings.clear();
+        this.totalInvested = 0.0;
+        takeSnapshot();
     }
     
     /**
@@ -147,6 +176,9 @@ public class Portfolio {
     public void reset() {
         this.holdings.clear();
         this.cashBalance = INITIAL_CASH_BALANCE;
+        this.totalInvested = 0.0;
+        this.performanceHistory.clear();
+        takeSnapshot();
     }
     
     /**
@@ -167,6 +199,7 @@ public class Portfolio {
             return false; // Insufficient funds
         }
         cashBalance -= amount;
+        takeSnapshot();
         return true;
     }
     
@@ -176,6 +209,7 @@ public class Portfolio {
      */
     public void addCash(double amount) {
         cashBalance += amount;
+        takeSnapshot();
     }
     
     /**
@@ -187,20 +221,46 @@ public class Portfolio {
     }
     
     /**
+     * Updates the total invested amount when adding a new holding.
+     * @param holding The holding being added
+     */
+    public void addInvestment(Holding holding) {
+        this.totalInvested += holding.getPricePerUnit() * holding.getQuantity();
+    }
+    
+    /**
+     * Updates the total invested amount when removing a holding.
+     * @param holding The holding being removed
+     */
+    public void removeInvestment(Holding holding) {
+        this.totalInvested -= holding.getPricePerUnit() * holding.getQuantity();
+        if (this.totalInvested < 0) this.totalInvested = 0;
+    }
+    
+    /**
      * Updates the total invested amount (e.g., when adding or removing holdings).
      * @param amount The amount to add or subtract.
      */
     public void updateTotalInvested(double amount) {
         this.totalInvested += amount;
+        if (this.totalInvested < 0) this.totalInvested = 0;
     }
     
     /**
      * Takes a snapshot of the current portfolio state for performance tracking.
-     * This could be called at regular intervals or after significant changes.
+     * This should be called after significant changes to the portfolio.
      */
-    public void snapshotPerformance() {
+    public void takeSnapshot() {
         double totalValue = getTotalValue();
         performanceHistory.add(new PortfolioSnapshot(totalValue, cashBalance));
+    }
+    
+    /**
+     * Takes a snapshot of the current portfolio state for performance tracking.
+     * Alias for takeSnapshot() to maintain backward compatibility.
+     */
+    public void snapshotPerformance() {
+        takeSnapshot();
     }
     
     /**
@@ -209,5 +269,13 @@ public class Portfolio {
      */
     public List<PortfolioSnapshot> getPerformanceHistory() {
         return Collections.unmodifiableList(performanceHistory);
+    }
+    
+    /**
+     * Gets the initial cash balance
+     * @return The initial cash balance
+     */
+    public double getInitialCashBalance() {
+        return INITIAL_CASH_BALANCE;
     }
 }

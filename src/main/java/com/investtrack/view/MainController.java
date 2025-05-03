@@ -22,6 +22,7 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.PieChart;
+import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -81,6 +82,10 @@ public class MainController {
     // Mini performance chart
     @FXML private LineChart<String, Number> miniChart;
     
+    // New dashboard charts
+    @FXML private PieChart allocationChart;
+    @FXML private LineChart<String, Number> extendedPerformanceChart;
+    
     // Buttons
     @FXML private Button btnEdit;
     @FXML private Button btnDelete;
@@ -134,8 +139,10 @@ public class MainController {
         updateDashboard();
         updateEditDeleteButtonState();
         
-        // Initialize mini chart
+        // Initialize charts
         initializeMiniChart();
+        initializeAllocationChart();
+        initializeExtendedPerformanceChart();
 
         // 6. Add Listener for Selection Changes
         holdingsTable.getSelectionModel().selectedItemProperty().addListener(
@@ -206,6 +213,128 @@ public class MainController {
         
         // Add series to chart
         miniChart.getData().add(series);
+        
+        // Style the series
+        series.getNode().setStyle("-fx-stroke: #4caf50; -fx-stroke-width: 2px;");
+    }
+    
+    /**
+     * Initializes the allocation chart in the dashboard
+     */
+    private void initializeAllocationChart() {
+        // Clear any existing data
+        if (allocationChart != null) {
+            allocationChart.getData().clear();
+            
+            // If we have holdings, populate the chart
+            if (!data.isEmpty()) {
+                updateAllocationChart();
+            } else {
+                // Add a placeholder when there are no holdings
+                allocationChart.getData().add(new PieChart.Data("Cash (100%)", portfolio.getCashBalance()));
+                
+                // Add tooltip to show the cash amount
+                addCashTooltip(allocationChart.getData().get(0));
+            }
+        }
+    }
+    
+    /**
+     * Updates the allocation chart with current portfolio data
+     */
+    private void updateAllocationChart() {
+        if (allocationChart == null) return;
+        
+        // Clear existing data
+        allocationChart.getData().clear();
+        
+        double totalAssets = portfolio.getTotalAssetValue();
+        double cashBalance = portfolio.getCashBalance();
+        
+        // First add a slice for cash if we have cash
+        if (cashBalance > 0) {
+            double cashPercentage = (cashBalance / totalAssets) * 100;
+            PieChart.Data cashData = new PieChart.Data(
+                String.format("Cash (%.1f%%)", cashPercentage), 
+                cashBalance
+            );
+            allocationChart.getData().add(cashData);
+            
+            // Add tooltip to show the cash amount
+            addCashTooltip(cashData);
+        }
+        
+        // Then add slices for each asset type
+        data.stream()
+            .collect(Collectors.groupingBy(Holding::getAssetType,
+                    Collectors.summingDouble(Holding::getCurrentValue)))
+            .forEach((type, value) -> {
+                double percentage = (value / totalAssets) * 100;
+                PieChart.Data assetData = new PieChart.Data(
+                    String.format("%s (%.1f%%)", type, percentage), 
+                    value
+                );
+                allocationChart.getData().add(assetData);
+                
+                // Add tooltip to show exact value
+                Tooltip tooltip = new Tooltip(
+                    String.format("%s: %s", type, CURRENCY_FORMAT.format(value))
+                );
+                Tooltip.install(assetData.getNode(), tooltip);
+            });
+        
+        // Style the chart
+        allocationChart.getData().forEach(data -> {
+            // Determine style based on data type (cash or asset type)
+            String styleName = data.getName().toLowerCase().contains("cash") 
+                ? "cash-slice" : "asset-slice";
+            data.getNode().getStyleClass().add(styleName);
+        });
+    }
+    
+    /**
+     * Adds a tooltip to the cash slice to show exact cash amount
+     */
+    private void addCashTooltip(PieChart.Data cashData) {
+        Tooltip tooltip = new Tooltip(
+            String.format("Cash Balance: %s", CURRENCY_FORMAT.format(portfolio.getCashBalance()))
+        );
+        Tooltip.install(cashData.getNode(), tooltip);
+    }
+    
+    /**
+     * Initializes the extended performance chart
+     */
+    private void initializeExtendedPerformanceChart() {
+        if (extendedPerformanceChart == null) return;
+        
+        // Clear any existing data
+        extendedPerformanceChart.getData().clear();
+        
+        // Create series for portfolio value
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Total Assets");
+        
+        // Add historical data points
+        List<PortfolioSnapshot> history = portfolio.getPerformanceHistory();
+        if (!history.isEmpty()) {
+            // Show up to 20 data points for a more detailed view
+            int startIndex = Math.max(0, history.size() - 20);
+            
+            for (int i = startIndex; i < history.size(); i++) {
+                PortfolioSnapshot snapshot = history.get(i);
+                String timeLabel = snapshot.getTimestamp().format(
+                    DateTimeFormatter.ofPattern("MM-dd HH:mm")
+                );
+                series.getData().add(new XYChart.Data<>(timeLabel, snapshot.getTotalAssetValue()));
+            }
+        } else {
+            // Add current point if no history
+            series.getData().add(new XYChart.Data<>("Now", portfolio.getTotalAssetValue()));
+        }
+        
+        // Add the series to the chart
+        extendedPerformanceChart.getData().add(series);
         
         // Style the series
         series.getNode().setStyle("-fx-stroke: #4caf50; -fx-stroke-width: 2px;");
@@ -455,6 +584,10 @@ public class MainController {
         
         // Update mini chart
         updateMiniChart();
+        
+        // Update allocation and extended performance charts
+        updateAllocationChart();
+        initializeExtendedPerformanceChart();
         
         // Update status
         lblStatus.setText("Portfolio has " + data.size() + " holdings");

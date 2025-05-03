@@ -9,6 +9,7 @@ com/investtrack/view/MainController$1.class
 com/investtrack/model/Portfolio.class
 com/investtrack/view/MainController$2.class
 com/investtrack/service/StockDataService.class
+com/investtrack/persistence/PortfolioRepository$LocalDateTimeAdapter.class
 com/investtrack/view/MainController$7.class
 com/investtrack/view/MainController$13.class
 com/investtrack/view/HoldingDialog$1.class
