@@ -12,7 +12,6 @@ import javafx.util.StringConverter;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Locale;
-import java.util.Optional;
 
 /**
  * A custom {@link Dialog} for creating or editing a {@link Holding}.
@@ -28,13 +27,9 @@ public class HoldingDialog extends Dialog<Holding> {
     private final TextField priceTextField = new TextField();
     private final ComboBox<AssetType> assetTypeComboBox = new ComboBox<>();
 
-    // --- Data ---
-    private final Holding holdingToEdit; // Null if creating a new holding
-
     // --- Formatting ---
     // Use locale-specific number format for parsing input
     private static final NumberFormat NUMBER_FORMAT = NumberFormat.getNumberInstance(Locale.getDefault());
-
 
     /**
      * Constructs a new HoldingDialog.
@@ -42,8 +37,6 @@ public class HoldingDialog extends Dialog<Holding> {
      * @param existingHolding The {@link Holding} to edit, or {@code null} to create a new one.
      */
     public HoldingDialog(Holding existingHolding) {
-        this.holdingToEdit = existingHolding;
-
         setTitle(existingHolding == null ? "Add New Holding" : "Edit Holding");
         setHeaderText(existingHolding == null ? "Enter details for the new holding." : "Update the details for the holding.");
 

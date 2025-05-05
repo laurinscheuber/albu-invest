@@ -1,9 +1,9 @@
-/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/MainApp.java
 /Users/laurin/Development/albu-invest/src/main/java/com/investtrack/model/AssetType.java
-/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/model/Holding.java
-/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/model/Portfolio.java
-/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/model/PortfolioSnapshot.java
 /Users/laurin/Development/albu-invest/src/main/java/com/investtrack/persistence/PortfolioRepository.java
+/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/view/MainController.java
 /Users/laurin/Development/albu-invest/src/main/java/com/investtrack/service/StockDataService.java
 /Users/laurin/Development/albu-invest/src/main/java/com/investtrack/view/HoldingDialog.java
-/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/view/MainController.java
+/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/model/Holding.java
+/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/model/PortfolioSnapshot.java
+/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/MainApp.java
+/Users/laurin/Development/albu-invest/src/main/java/com/investtrack/model/Portfolio.java

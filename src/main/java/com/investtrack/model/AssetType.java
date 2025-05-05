@@ -5,6 +5,8 @@ package com.investtrack.model;
  * This enum defines the different categories of investments that can be tracked.
  */
 public enum AssetType {
+    /** Represents cash balance/liquid funds. */
+    CASH,
     /** Represents common stocks traded on exchanges. */
     STOCK,
     /** Represents debt securities issued by governments or corporations. */

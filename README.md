@@ -1,52 +1,69 @@
-# Portfolio Tracker
+# Portfolio-Tracker
 
-A simple JavaFX application to track investment holdings.
+Eine umfassende JavaFX-Anwendung zur Verfolgung und Visualisierung von Investitionsportfolios. Diese Anwendung ermöglicht es Benutzern, ihre Investitionen über verschiedene Anlageklassen hinweg zu verwalten, einschliesslich Aktien, Kryptowährungen, ETFs und Fonds mit Echtzeit-Preissimulationen.
 
-## Features
+## Über dieses Projekt
 
-*   Add, edit, and delete holdings (stocks, ETFs, bonds, etc.).
-*   Persists portfolio data to `$HOME/.investtrack/portfolio.json` using JSON.
-*   Displays holdings in a sortable table view.
-*   Includes basic error handling for invalid inputs.
-*   Visualizes asset allocation with a dynamic pie chart.
+Dies ist ein Studentenprojekt, entwickelt von Albulena Aziri. Die Anwendung wurde entwickelt, um Benutzern bei der Verfolgung ihres Investitionsportfolios mit einer übersichtlichen, intuitiven Benutzeroberfläche und leistungsstarken Visualisierungswerkzeugen zu helfen.
 
-## Architecture
+## Funktionen
 
-*   **GUI Toolkit:** Java 17 + OpenJFX 21 (JavaFX)
-*   **Architecture:** Model-View-Controller (MVC)
-    *   **Model:** Plain Java objects (`Holding`, `Portfolio`, `AssetType`)
-    *   **View:** FXML (`MainView.fxml`)
-    *   **Controller:** JavaFX Controllers (`MainController`, `HoldingDialog`)
-*   **Persistence:** JSON serialization using Gson library.
-*   **Build Tool:** Maven 3.9+ with `javafx-maven-plugin`.
+- **Multi-Asset-Unterstützung**: Verfolgen Sie Aktien, Kryptowährungen, ETFs und Fonds an einem Ort
+- **Umfassendes Dashboard**: Überblick über Barguthaben, Bestandswert und Gewinn/Verlust auf einen Blick
+- **Interaktive Visualisierungen**: Asset-Allokations-Diagramm und Leistungstrends
+- **Dynamische Preissimulation**: Echtzeit-Preisschwankungen mit unterschiedlicher Volatilität je nach Anlagetyp
+- **Portfolio-Management**: Einfaches Kaufen und Verkaufen von Vermögenswerten mit einer benutzerfreundlichen Oberfläche
+- **Persistente Speicherung**: Portfoliodaten werden zwischen Sitzungen in einer lokalen JSON-Datei gespeichert
+- **Leistungsanalyse**: Verfolgen Sie Gewinn/Verlust sowohl in absoluten Zahlen als auch in Prozentsätzen
 
-## Quick Start
+## Architektur
 
-**Prerequisites:**
+- **GUI-Toolkit:** Java 17 + OpenJFX 21 (JavaFX)
+- **Architektur:** Model-View-Controller (MVC)
+  - **Model:** Einfache Java-Objekte (`Holding`, `Portfolio`, `AssetType`)
+  - **View:** FXML (`MainView.fxml`)
+  - **Controller:** JavaFX-Controller (`MainController`, `HoldingDialog`)
+- **Persistenz:** JSON-Serialisierung mit der Gson-Bibliothek
+- **Build-Tool:** Maven 3.9+ mit `javafx-maven-plugin`
 
-*   JDK 17 or later
-*   Maven 3.9 or later
+## Ausführen der Anwendung
 
-**Steps:**
+**Voraussetzungen:**
 
-1.  **Clone the repository (or navigate to the project folder):**
-    ```bash
-    # git clone <your-repo-url> # If applicable
-    cd /Users/laurin/Development/albu-invest
-    ```
+- JDK 17 oder höher
+- Maven 3.9 oder höher
 
-2.  **Run the application:**
-    ```bash
-    mvn clean javafx:run
-    ```
-    This command compiles the code and starts the JavaFX application. The `javafx-maven-plugin` handles the necessary OpenJFX runtime libraries automatically for your OS (Windows/Mac/Linux).
+**Schritte:**
 
-3.  **(Optional) Package the application:**
-    ```bash
-    mvn package
-    ```
-    This creates an executable JAR file in the `target` directory.
+1. **Repository klonen oder herunterladen**
 
-## AI Support
+2. **Zum Projektverzeichnis navigieren:**
 
-This project structure and initial code were generated with the assistance of an AI programming assistant. The AI helped set up the Maven project, create the basic MVC structure, implement core features like CRUD operations and JSON persistence, and generate the initial FXML layout and Javadoc comments.
+   ```bash
+   cd albu-invest
+   ```
+
+3. **Anwendung ausführen:**
+
+   ```bash
+   mvn clean javafx:run
+   ```
+
+4. **Beginnen Sie mit dem Investieren!**
+   - Verwenden Sie die Schaltfläche "Buy Assets", um Investitionen zu Ihrem Portfolio hinzuzufügen
+   - Verfolgen Sie die Performance über das Dashboard und die Visualisierungen
+   - Verkaufen Sie Vermögenswerte bei Bedarf mit der Schaltfläche "Verkaufen"
+
+## Erstellung eines verteilbaren Pakets
+
+Um eine ausführbare JAR-Datei zu erstellen:
+
+```bash
+mvn package
+```
+
+Die generierte JAR-Datei befindet sich im Verzeichnis `target`.
+
+## Entwicklungshinweis
+
+Dieses Projekt wurde als Studentenprojekt von Albulena Aziri entwickelt und demonstriert Fähigkeiten in JavaFX, Finanzanwendungsentwicklung und interaktiver Datenvisualisierung.

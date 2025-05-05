@@ -7,9 +7,6 @@ import com.investtrack.model.PortfolioSnapshot;
 import com.investtrack.persistence.PortfolioRepository;
 import com.investtrack.service.StockDataService;
 
-import javafx.animation.Animation;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -22,7 +19,7 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.PieChart;
-import javafx.scene.chart.PieChart;
+import javafx.scene.chart.CategoryAxis;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -35,13 +32,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.util.Duration;
-import javafx.util.Callback;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
@@ -49,113 +42,114 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
 
 /**
- * Controller for the main window (MainView.fxml).
+ * Controller für das Hauptfenster (MainView.fxml).
  */
 public class MainController {
 
-    // --- FXML Injected Fields ---
+    // --- FXML Injizierte Felder ---
     @FXML private TableView<Holding> holdingsTable;
     @FXML private TableColumn<Holding, String> colSymbol;
     @FXML private TableColumn<Holding, String> colName;
     @FXML private TableColumn<Holding, Double> colQty;
-    @FXML private TableColumn<Holding, Double> colBuyPrice;  // Purchase price
-    @FXML private TableColumn<Holding, Double> colPrice;     // Current price
-    @FXML private TableColumn<Holding, Double> colPriceChange; // Price difference
-    @FXML private TableColumn<Holding, Double> colPriceChangePct; // Price change percentage
+    @FXML private TableColumn<Holding, Double> colBuyPrice;  // Kaufpreis
+    @FXML private TableColumn<Holding, Double> colPrice;     // Aktueller Preis
+    @FXML private TableColumn<Holding, Double> colPriceChange; // Preisdifferenz
+    @FXML private TableColumn<Holding, Double> colPriceChangePct; // Prozentuale Preisänderung
     @FXML private TableColumn<Holding, String> colValue;
-    @FXML private TableColumn<Holding, Double> colProfitLoss; // Profit/loss for the holding
+    @FXML private TableColumn<Holding, Double> colProfitLoss; // Gewinn/Verlust für den Bestand
     @FXML private TableColumn<Holding, AssetType> colType;
-    @FXML private TableColumn<Holding, Holding> colChart;    // Mini chart for each holding
+    @FXML private TableColumn<Holding, Holding> colChart;    // Mini-Chart für jeden Bestand
     
-    // Dashboard labels
-    @FXML private Label lblTotal;            // Total holdings value
-    @FXML private Label lblCashBalance;      // Available cash
-    @FXML private Label lblTotalAssets;      // Total assets (holdings + cash)
-    @FXML private Label lblProfitLoss;       // Profit/loss in CHF
-    @FXML private Label lblProfitLossPercent; // Profit/loss percentage
-    @FXML private Label lblTotalInvested;    // Total invested amount
-    @FXML private Label lblStatus;           // Status message
-    @FXML private Label lblLastUpdate;       // Last update timestamp
+    // Dashboard-Labels
+    @FXML private Label lblTotal;            // Gesamtwert der Bestände
+    @FXML private Label lblCashBalance;      // Verfügbares Bargeld
+    @FXML private Label lblTotalAssets;      // Gesamtvermögen (Bestände + Bargeld)
+    @FXML private Label lblProfitLoss;       // Gewinn/Verlust in CHF
+    @FXML private Label lblProfitLossPercent; // Gewinn/Verlust in Prozent
+    @FXML private Label lblStatus;           // Statusmeldung
+    @FXML private Label lblLastUpdate;       // Zeitpunkt der letzten Aktualisierung
     
-    // Mini performance chart
+    // Mini-Performance-Chart
     @FXML private LineChart<String, Number> miniChart;
     
-    // New dashboard charts
+    // Neue Dashboard-Charts
     @FXML private PieChart allocationChart;
+    @FXML private LineChart<String, Number> assetBreakdownChart;
     @FXML private LineChart<String, Number> extendedPerformanceChart;
     
     // Buttons
-    @FXML private Button btnEdit;
-    @FXML private Button btnDelete;
     @FXML private Button btnSell;
 
-    // --- Data Model & Persistence ---
+    // --- Datenmodell & Persistenz ---
     private PortfolioRepository repo;
     private Portfolio portfolio;
     private ObservableList<Holding> data;
     
-    // --- Last update time tracking ---
+    // --- Verfolgung der letzten Aktualisierungszeit ---
     private LocalDateTime lastUpdateTime;
 
-    // --- Stock Data Service for price simulation ---
+    // --- Stock Data Service für die Preissimulation ---
     private final StockDataService stockDataService = StockDataService.getInstance();
     
-    // --- Formatting ---
+    // --- Formatierung ---
     private static final NumberFormat CURRENCY_FORMAT = NumberFormat.getCurrencyInstance(Locale.getDefault());
     private static final NumberFormat PERCENT_FORMAT = NumberFormat.getPercentInstance(Locale.getDefault());
     private static final NumberFormat NUMBER_FORMAT = NumberFormat.getNumberInstance(Locale.getDefault());
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     
     /**
-     * Initialize the controller.
-     * This method is automatically called after the FXML file has been loaded.
+     * Initialisiert den Controller.
+     * Diese Methode wird automatisch aufgerufen, nachdem die FXML-Datei geladen wurde.
      */
     @FXML
     private void initialize() {
-        // Customize Number Formats
+        // Anpassen der Zahlenformate
         PERCENT_FORMAT.setMinimumFractionDigits(2);
         NUMBER_FORMAT.setMinimumFractionDigits(2);
         NUMBER_FORMAT.setMaximumFractionDigits(6);
         
-        // 1. Initialize the repository and load data
+        // 1. Repository initialisieren und Daten laden
         repo = new PortfolioRepository(Paths.get(System.getProperty("user.home"), "investtrack.json"));
         portfolio = repo.load();
         data = FXCollections.observableArrayList(portfolio.getHoldings());
         
-        // 2. Configure the Table Columns
+        // 2. Tabellenspalten konfigurieren
         configureTableColumns();
         
-        // 3. Set up sorting
+        // 3. Sortierung einrichten
         SortedList<Holding> sortedData = new SortedList<>(data);
         sortedData.comparatorProperty().bind(holdingsTable.comparatorProperty());
         holdingsTable.setItems(sortedData);
         
-        // 4. Set up selection mode
+        // 4. Auswahlmodus festlegen
         holdingsTable.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         
-        // 5. Initial UI Update
+        // 5. Initiale UI-Aktualisierung
         updateDashboard();
         updateEditDeleteButtonState();
         
-        // Initialize charts
+        // Charts initialisieren
         initializeMiniChart();
         initializeAllocationChart();
-        initializeExtendedPerformanceChart();
+        initializeAssetBreakdownChart();
 
-        // 6. Add Listener for Selection Changes
+        // 6. Listener für Auswahländerungen hinzufügen
         holdingsTable.getSelectionModel().selectedItemProperty().addListener(
                 (obs, oldSelection, newSelection) -> updateEditDeleteButtonState()
         );
 
-        // 7. Add Listener for Data Changes
+        // 7. Listener für Datenänderungen hinzufügen
         data.addListener((javafx.collections.ListChangeListener.Change<? extends Holding> c) -> {
             boolean changed = false;
             while (c.next()) {
                 if (c.wasAdded() || c.wasRemoved() || c.wasUpdated()) {
                     changed = true;
-                    // Handle additions
+                    // Behandlung von Hinzufügungen
                     if(c.wasAdded()){
                         c.getAddedSubList().forEach(h -> {
                             if(portfolio.findHoldingById(h.getId()).isEmpty()){
@@ -163,7 +157,7 @@ public class MainController {
                             }
                         });
                     }
-                    // Handle removals
+                    // Behandlung von Entfernungen
                     if(c.wasRemoved()){
                          c.getRemoved().forEach(h -> portfolio.removeHoldingById(h.getId()));
                     }
@@ -176,95 +170,206 @@ public class MainController {
             }
         });
         
-        // 8. Start price simulation for stock holdings
+        // 8. Preissimulation für Aktienbestände starten
         startStockPriceSimulation();
         
-        // Record initial update time
+        // Anfängliche Aktualisierungszeit aufzeichnen
         lastUpdateTime = LocalDateTime.now();
         updateLastUpdateTime();
     }
     
     /**
-     * Initialize mini chart in the dashboard header
+     * Initialisiert das Mini-Chart im Dashboard-Header mit verbesserter Zoom-Funktion
      */
     private void initializeMiniChart() {
-        // Clear any existing data
+        // Vorhandene Daten löschen
         miniChart.getData().clear();
         
-        // Create series for portfolio value
+        // Serie für den Portfolio-Wert erstellen
         XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Portfolio Value");
+        series.setName("Portfolio-Wert");
         
-        // If we have historical data, add it to the chart
+        // Wenn wir historische Daten haben, fügen wir sie dem Chart hinzu
         if (!portfolio.getPerformanceHistory().isEmpty()) {
-            // Add last 10 snapshots (or fewer if we don't have 10)
+            // Nehmen Sie nur die letzten 5 Snapshots für besser sichtbare Schwankungen (gezoomte Ansicht)
             List<PortfolioSnapshot> history = portfolio.getPerformanceHistory();
-            int startIndex = Math.max(0, history.size() - 10);
+            int startIndex = Math.max(0, history.size() - 5);
+            
+            double minValue = Double.MAX_VALUE;
+            double maxValue = Double.MIN_VALUE;
             
             for (int i = startIndex; i < history.size(); i++) {
                 PortfolioSnapshot snapshot = history.get(i);
                 String timeLabel = snapshot.getTimestamp().format(TIME_FORMATTER);
-                series.getData().add(new XYChart.Data<>(timeLabel, snapshot.getTotalAssetValue()));
+                double value = snapshot.getTotalAssetValue();
+                series.getData().add(new XYChart.Data<>(timeLabel, value));
+                
+                // Min/Max-Werte für bessere Y-Achsen-Skalierung verfolgen
+                minValue = Math.min(minValue, value);
+                maxValue = Math.max(maxValue, value);
+            }
+            
+            // Benutzerdefinierten Bereich für die Y-Achse festlegen, um die Sichtbarkeit von Schwankungen zu verbessern
+            NumberAxis yAxis = (NumberAxis) miniChart.getYAxis();
+            if (minValue != Double.MAX_VALUE && maxValue != Double.MIN_VALUE) {
+                // 2% Padding für bessere Sichtbarkeit erstellen
+                double range = maxValue - minValue;
+                double padding = range * 0.02;
+                yAxis.setAutoRanging(false);
+                yAxis.setLowerBound(Math.max(0, minValue - padding)); // Nie unter Null gehen
+                yAxis.setUpperBound(maxValue + padding);
+                yAxis.setTickUnit(range / 4); // Vernünftige Anzahl von Ticks erstellen
             }
         } else {
-            // Add current point if no history
-            series.getData().add(new XYChart.Data<>("Now", portfolio.getTotalAssetValue()));
+            // Aktuellen Punkt hinzufügen, wenn keine Historie vorhanden ist
+            series.getData().add(new XYChart.Data<>("Jetzt", portfolio.getTotalAssetValue()));
         }
         
-        // Add series to chart
+        // Serie zum Chart hinzufügen
         miniChart.getData().add(series);
         
-        // Style the series
+        // Serie stylen
+        series.getNode().setStyle("-fx-stroke: #4caf50; -fx-stroke-width: 2px;");
+        
+        // Zoom-Funktionalität hinzufügen (Kontextmenü mit Zoom-Optionen)
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem zoomInItem = new MenuItem("Hineinzoomen (Letzte 3 Punkte)");
+        MenuItem zoomMediumItem = new MenuItem("Mittlere Ansicht (Letzte 5 Punkte)");
+        MenuItem zoomOutItem = new MenuItem("Herauszoomen (Alle Punkte)");
+        
+        zoomInItem.setOnAction(e -> updateMiniChartZoom(3));
+        zoomMediumItem.setOnAction(e -> updateMiniChartZoom(5));
+        zoomOutItem.setOnAction(e -> updateMiniChartZoom(0)); // 0 bedeutet alle Punkte
+        
+        contextMenu.getItems().addAll(zoomInItem, zoomMediumItem, zoomOutItem);
+        miniChart.setOnContextMenuRequested(e -> contextMenu.show(miniChart, e.getScreenX(), e.getScreenY()));
+    }
+    
+    /**
+     * Aktualisiert das Mini-Chart mit dem angegebenen Zoom-Level
+     * @param points Anzahl der anzuzeigenden Punkte (0 für alle)
+     */
+    private void updateMiniChartZoom(int points) {
+        // Vorhandene Daten löschen
+        miniChart.getData().clear();
+        
+        // Serie für den Portfolio-Wert erstellen
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Portfolio-Wert");
+        
+        // Wenn wir historische Daten haben, fügen wir sie dem Chart hinzu
+        if (!portfolio.getPerformanceHistory().isEmpty()) {
+            List<PortfolioSnapshot> history = portfolio.getPerformanceHistory();
+            int startIndex = 0;
+            
+            if (points > 0) {
+                // Startindex basierend auf dem Zoom-Level berechnen
+                startIndex = Math.max(0, history.size() - points);
+            }
+            
+            double minValue = Double.MAX_VALUE;
+            double maxValue = Double.MIN_VALUE;
+            
+            for (int i = startIndex; i < history.size(); i++) {
+                PortfolioSnapshot snapshot = history.get(i);
+                String timeLabel = snapshot.getTimestamp().format(TIME_FORMATTER);
+                double value = snapshot.getTotalAssetValue();
+                series.getData().add(new XYChart.Data<>(timeLabel, value));
+                
+                // Min/Max-Werte für bessere Y-Achsen-Skalierung verfolgen
+                minValue = Math.min(minValue, value);
+                maxValue = Math.max(maxValue, value);
+            }
+            
+            // Benutzerdefinierten Bereich für die Y-Achse festlegen, um die Sichtbarkeit von Schwankungen zu verbessern
+            NumberAxis yAxis = (NumberAxis) miniChart.getYAxis();
+            if (minValue != Double.MAX_VALUE && maxValue != Double.MIN_VALUE) {
+                // 2% Padding für bessere Sichtbarkeit erstellen
+                double range = maxValue - minValue;
+                double padding = range * 0.02;
+                yAxis.setAutoRanging(false);
+                yAxis.setLowerBound(Math.max(0, minValue - padding)); // Nie unter Null gehen
+                yAxis.setUpperBound(maxValue + padding);
+                yAxis.setTickUnit(range / 4); // Vernünftige Anzahl von Ticks erstellen
+            }
+        } else {
+            // Aktuellen Punkt hinzufügen, wenn keine Historie vorhanden ist
+            series.getData().add(new XYChart.Data<>("Jetzt", portfolio.getTotalAssetValue()));
+        }
+        
+        // Serie zum Chart hinzufügen
+        miniChart.getData().add(series);
+        
+        // Serie stylen
         series.getNode().setStyle("-fx-stroke: #4caf50; -fx-stroke-width: 2px;");
     }
     
     /**
-     * Initializes the allocation chart in the dashboard
+     * Initialisiert das Zuordnungs-Chart im Dashboard mit verbessertem Styling
      */
     private void initializeAllocationChart() {
-        // Clear any existing data
+        // Vorhandene Daten löschen
         if (allocationChart != null) {
             allocationChart.getData().clear();
             
-            // If we have holdings, populate the chart
+            // Wenn wir Bestände haben, befüllen wir das Chart
             if (!data.isEmpty()) {
                 updateAllocationChart();
             } else {
-                // Add a placeholder when there are no holdings
-                allocationChart.getData().add(new PieChart.Data("Cash (100%)", portfolio.getCashBalance()));
+                // Einen Platzhalter hinzufügen, wenn keine Bestände vorhanden sind
+                PieChart.Data cashData = new PieChart.Data("Bargeld (100%)", portfolio.getCashBalance());
+                allocationChart.getData().add(cashData);
                 
-                // Add tooltip to show the cash amount
-                addCashTooltip(allocationChart.getData().get(0));
+                // Tooltip hinzufügen, um den Bargeldbetrag anzuzeigen
+                Tooltip tooltip = new Tooltip(
+                    String.format("Barguthaben: %s", CURRENCY_FORMAT.format(portfolio.getCashBalance()))
+                );
+                Tooltip.install(cashData.getNode(), tooltip);
             }
+            
+            // Saubereres Styling auf das Chart anwenden und Animation deaktivieren
+            allocationChart.setStyle("-fx-background-color: transparent;");
+            allocationChart.setLegendSide(javafx.geometry.Side.RIGHT);
+            allocationChart.setAnimated(false);
+            allocationChart.setLabelsVisible(true); // Labels auf den Kreissegmenten anzeigen
         }
     }
     
     /**
-     * Updates the allocation chart with current portfolio data
+     * Aktualisiert das Zuordnungs-Chart mit aktuellen Portfolio-Daten
      */
     private void updateAllocationChart() {
         if (allocationChart == null) return;
         
-        // Clear existing data
+        // Vorhandene Daten löschen
         allocationChart.getData().clear();
         
         double totalAssets = portfolio.getTotalAssetValue();
         double cashBalance = portfolio.getCashBalance();
         
-        // First add a slice for cash if we have cash
+        // Zuerst ein Segment für Bargeld hinzufügen, wenn wir Bargeld haben
         if (cashBalance > 0) {
             double cashPercentage = (cashBalance / totalAssets) * 100;
             PieChart.Data cashData = new PieChart.Data(
-                String.format("Cash (%.1f%%)", cashPercentage), 
+                String.format("Bargeld (%.1f%%)", cashPercentage), 
                 cashBalance
             );
             allocationChart.getData().add(cashData);
             
-            // Add tooltip to show the cash amount
-            addCashTooltip(cashData);
+            // Das Bargeld-Segment stylen
+            cashData.getNode().setStyle("-fx-pie-color: #4CAF50;"); // Grün für Bargeld
+            
+            // Tooltip hinzufügen, um den Bargeldbetrag anzuzeigen
+            Tooltip tooltip = new Tooltip(
+                String.format("Barguthaben: %s", CURRENCY_FORMAT.format(portfolio.getCashBalance()))
+            );
+            Tooltip.install(cashData.getNode(), tooltip);
         }
         
-        // Then add slices for each asset type
+        // Dann Segmente für jeden Asset-Typ mit lebendigen Farben hinzufügen
+        String[] colors = {"#2196F3", "#FFC107", "#9C27B0", "#F44336", "#3F51B5", "#FF9800", "#795548"};
+        AtomicInteger colorIndex = new AtomicInteger(0);
+        
         data.stream()
             .collect(Collectors.groupingBy(Holding::getAssetType,
                     Collectors.summingDouble(Holding::getCurrentValue)))
@@ -276,68 +381,163 @@ public class MainController {
                 );
                 allocationChart.getData().add(assetData);
                 
-                // Add tooltip to show exact value
+                // Eine Farbe aus unserer Palette anwenden, die durch die verfügbaren Farben zyklisch verläuft
+                int idx = colorIndex.getAndIncrement() % colors.length;
+                assetData.getNode().setStyle("-fx-pie-color: " + colors[idx] + ";");
+                
+                // Tooltip hinzufügen, um den genauen Wert anzuzeigen
                 Tooltip tooltip = new Tooltip(
                     String.format("%s: %s", type, CURRENCY_FORMAT.format(value))
                 );
                 Tooltip.install(assetData.getNode(), tooltip);
             });
-        
-        // Style the chart
-        allocationChart.getData().forEach(data -> {
-            // Determine style based on data type (cash or asset type)
-            String styleName = data.getName().toLowerCase().contains("cash") 
-                ? "cash-slice" : "asset-slice";
-            data.getNode().getStyleClass().add(styleName);
-        });
     }
     
     /**
-     * Adds a tooltip to the cash slice to show exact cash amount
+     * Initialisiert das Asset-Breakdown-Chart, das Bargeld, Aktien, Krypto und Gesamtwerte im Zeitverlauf anzeigt
+     * mit verbesserter Visualisierung
      */
-    private void addCashTooltip(PieChart.Data cashData) {
-        Tooltip tooltip = new Tooltip(
-            String.format("Cash Balance: %s", CURRENCY_FORMAT.format(portfolio.getCashBalance()))
-        );
-        Tooltip.install(cashData.getNode(), tooltip);
-    }
-    
-    /**
-     * Initializes the extended performance chart
-     */
-    private void initializeExtendedPerformanceChart() {
-        if (extendedPerformanceChart == null) return;
+    private void initializeAssetBreakdownChart() {
+        if (assetBreakdownChart == null) return;
         
-        // Clear any existing data
-        extendedPerformanceChart.getData().clear();
+        // Vorhandene Daten löschen
+        assetBreakdownChart.getData().clear();
         
-        // Create series for portfolio value
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Total Assets");
-        
-        // Add historical data points
+        // Historische Daten aus Portfolio-Snapshots abrufen
         List<PortfolioSnapshot> history = portfolio.getPerformanceHistory();
-        if (!history.isEmpty()) {
-            // Show up to 20 data points for a more detailed view
-            int startIndex = Math.max(0, history.size() - 20);
-            
-            for (int i = startIndex; i < history.size(); i++) {
-                PortfolioSnapshot snapshot = history.get(i);
-                String timeLabel = snapshot.getTimestamp().format(
-                    DateTimeFormatter.ofPattern("MM-dd HH:mm")
-                );
-                series.getData().add(new XYChart.Data<>(timeLabel, snapshot.getTotalAssetValue()));
-            }
-        } else {
-            // Add current point if no history
-            series.getData().add(new XYChart.Data<>("Now", portfolio.getTotalAssetValue()));
+        
+        if (history.isEmpty()) {
+            // Anstelle der Verwendung von setPlaceholder, das für LineChart nicht verfügbar ist,
+            // zeigen wir einfach ein leeres Chart mit einem Label im übergeordneten Container an
+            assetBreakdownChart.getData().clear();
+            lblStatus.setText("Nicht genügend Daten, um das Asset-Breakdown-Chart anzuzeigen");
+            return;
         }
         
-        // Add the series to the chart
-        extendedPerformanceChart.getData().add(series);
+        // Nur die letzten 7 Datenpunkte für mehr Übersichtlichkeit anzeigen
+        int startIndex = Math.max(0, history.size() - 7);
         
-        // Style the series
-        series.getNode().setStyle("-fx-stroke: #4caf50; -fx-stroke-width: 2px;");
+        // Eine Map erstellen, um Asset-Werte nach Typ und Zeitstempel zu speichern
+        Map<AssetType, XYChart.Series<String, Number>> seriesMap = new HashMap<>();
+        
+        // Gesamtvermögen-Serie erstellen
+        XYChart.Series<String, Number> totalSeries = new XYChart.Series<>();
+        totalSeries.setName("Gesamtvermögen");
+        
+        // Serien für verschiedene Asset-Typen mit ihren Farben initialisieren
+        Map<AssetType, String> colorMap = new HashMap<>();
+        colorMap.put(AssetType.CASH, "#4CAF50");     // Grün für Bargeld
+        colorMap.put(AssetType.STOCK, "#2196F3");    // Blau für Aktien
+        colorMap.put(AssetType.CRYPTO, "#9C27B0");   // Lila für Krypto
+        colorMap.put(AssetType.FUND, "#FFC107");     // Bernstein für Fonds
+        colorMap.put(AssetType.ETF, "#FF9800");      // Orange für ETFs
+        colorMap.put(AssetType.BOND, "#795548");     // Braun für Anleihen
+        
+        // Serien für jeden Asset-Typ erstellen
+        for (AssetType type : colorMap.keySet()) {
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            series.setName(type.toString());
+            seriesMap.put(type, series);
+        }
+        
+        // Maximaler Asset-Wert zur Skalierung des Charts
+        double maxAssetValue = 0;
+        
+        // Jeden Snapshot verarbeiten
+        for (int i = startIndex; i < history.size(); i++) {
+            PortfolioSnapshot snapshot = history.get(i);
+            String timeLabel = snapshot.getTimestamp().format(
+                DateTimeFormatter.ofPattern("HH:mm")
+            );
+            
+            // Gesamtvermögen-Datenpunkt hinzufügen
+            double totalValue = snapshot.getTotalAssetValue();
+            totalSeries.getData().add(new XYChart.Data<>(timeLabel, totalValue));
+            maxAssetValue = Math.max(maxAssetValue, totalValue);
+            
+            // Bargeld-Datenpunkt hinzufügen
+            double cashValue = snapshot.getCashBalance();
+            seriesMap.get(AssetType.CASH).getData().add(new XYChart.Data<>(timeLabel, cashValue));
+            
+            // Berechnete Asset-Werte für das Datum verwenden
+            // In einer realen Implementierung würde dies aus dem Asset-Typ-Breakdown des Snapshots kommen
+            Map<AssetType, Double> assetValues = 
+                calculateTypicalAssetDistribution(totalValue - cashValue, i - startIndex);
+            
+            // Datenpunkte für jeden Asset-Typ hinzufügen
+            for (Map.Entry<AssetType, Double> entry : assetValues.entrySet()) {
+                if (entry.getKey() != AssetType.CASH && seriesMap.containsKey(entry.getKey())) {
+                    seriesMap.get(entry.getKey()).getData().add(
+                        new XYChart.Data<>(timeLabel, entry.getValue())
+                    );
+                }
+            }
+        }
+        
+        // Chart-Achsen für bessere Visualisierung konfigurieren
+        NumberAxis yAxis = (NumberAxis) assetBreakdownChart.getYAxis();
+        yAxis.setLabel("Wert (CHF)");
+        yAxis.setAutoRanging(false);
+        yAxis.setLowerBound(0);
+        yAxis.setUpperBound(maxAssetValue * 1.05); // 5% Padding oben
+        yAxis.setTickUnit(maxAssetValue / 5);
+        
+        CategoryAxis xAxis = (CategoryAxis) assetBreakdownChart.getXAxis();
+        xAxis.setLabel("Zeit");
+        
+        // Jede Serie zum Chart hinzufügen und Styling anwenden
+        for (AssetType type : seriesMap.keySet()) {
+            XYChart.Series<String, Number> series = seriesMap.get(type);
+            if (!series.getData().isEmpty()) {
+                assetBreakdownChart.getData().add(series);
+                // Farbstyling anwenden
+                if (series.getNode() != null) {
+                    series.getNode().setStyle("-fx-stroke: " + colorMap.get(type) + "; -fx-stroke-width: 2px;");
+                }
+            }
+        }
+        
+        // Gesamtserie zuletzt hinzufügen, damit sie oben ist
+        assetBreakdownChart.getData().add(totalSeries);
+        if (totalSeries.getNode() != null) {
+            totalSeries.getNode().setStyle("-fx-stroke: #F44336; -fx-stroke-width: 3px;"); // Rot für Gesamt (dicker)
+        }
+        
+        // Legende hinzufügen
+        assetBreakdownChart.setLegendVisible(true);
+        assetBreakdownChart.setLegendSide(javafx.geometry.Side.TOP);
+        
+        // Animation für bessere Performance deaktivieren
+        assetBreakdownChart.setAnimated(false);
+    }
+    
+    /**
+     * Hilfsmethode zur Generierung einer typischen Asset-Verteilung für Demonstrationszwecke
+     * In einer realen App würde dies aus tatsächlichen historischen Daten stammen
+     */
+    private Map<AssetType, Double> calculateTypicalAssetDistribution(double totalInvestedValue, int timeOffset) {
+        Map<AssetType, Double> result = new HashMap<>();
+        
+        // Eine realistisch aussehende Verteilung erstellen, die sich im Laufe der Zeit leicht ändert
+        double stockBase = 0.45 + (timeOffset * 0.01); // Aktien wachsen leicht
+        double cryptoBase = 0.25 - (timeOffset * 0.005); // Krypto nimmt leicht ab
+        double fundBase = 0.20;
+        double etfBase = 0.10 + (timeOffset * 0.002); // ETFs wachsen sehr leicht
+        
+        // Normalisieren, um sicherzustellen, dass sie 1.0 ergeben
+        double sum = stockBase + cryptoBase + fundBase + etfBase;
+        stockBase /= sum;
+        cryptoBase /= sum;
+        fundBase /= sum;
+        etfBase /= sum;
+        
+        // Absolute Werte berechnen
+        result.put(AssetType.STOCK, totalInvestedValue * stockBase);
+        result.put(AssetType.CRYPTO, totalInvestedValue * cryptoBase);
+        result.put(AssetType.FUND, totalInvestedValue * fundBase);
+        result.put(AssetType.ETF, totalInvestedValue * etfBase);
+        
+        return result;
     }
     
     /**
@@ -554,7 +754,6 @@ public class MainController {
         lblTotal.setText(CURRENCY_FORMAT.format(portfolio.getTotalValue()));
         lblCashBalance.setText(CURRENCY_FORMAT.format(portfolio.getCashBalance()));
         lblTotalAssets.setText(CURRENCY_FORMAT.format(portfolio.getTotalAssetValue()));
-        lblTotalInvested.setText(CURRENCY_FORMAT.format(portfolio.getTotalInvested()));
         
         // Update profit/loss
         double profitLoss = portfolio.getProfitLoss();
@@ -582,12 +781,13 @@ public class MainController {
             lblProfitLossPercent.setTextFill(Color.BLACK);
         }
         
-        // Update mini chart
-        updateMiniChart();
+        // Take a new snapshot for the charts
+        portfolio.takeSnapshot();
         
-        // Update allocation and extended performance charts
+        // Update charts
+        updateMiniChart();
         updateAllocationChart();
-        initializeExtendedPerformanceChart();
+        initializeAssetBreakdownChart(); // Reinitialize with new data
         
         // Update status
         lblStatus.setText("Portfolio has " + data.size() + " holdings");
@@ -617,8 +817,6 @@ public class MainController {
 
     private void updateEditDeleteButtonState() {
         boolean hasSelection = holdingsTable.getSelectionModel().getSelectedItem() != null;
-        btnEdit.setDisable(!hasSelection);
-        btnDelete.setDisable(!hasSelection);
         btnSell.setDisable(!hasSelection);
     }
 
@@ -821,93 +1019,124 @@ public class MainController {
     }
     
     /**
-     * Adds predefined stocks from the StockDataService
+     * Adds predefined assets from the StockDataService
      */
     @FXML
     public void addPredefinedStocksAction() {
-        // Create dialog to select from predefined stocks
+        // Create dialog to select from predefined assets
         Dialog<StockSelectionResult> dialog = new Dialog<>();
         dialog.setTitle("Add Predefined Asset");
-        dialog.setHeaderText("Select an asset and specify quantity");
+        dialog.setHeaderText("Select an asset by type, group, and name");
         
         // Set the button types
         ButtonType addButtonType = new ButtonType("Add to Portfolio", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
         
-        // Create ComboBox for stock selection
-        ComboBox<StockDataService.StockData> stockComboBox = new ComboBox<>();
-        stockComboBox.setItems(FXCollections.observableArrayList(stockDataService.getPredefinedStocks()));
-        stockComboBox.setCellFactory(param -> new ListCell<StockDataService.StockData>() {
-            @Override
-            protected void updateItem(StockDataService.StockData item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(String.format("%s - %s (%s) [%s]", 
-                        item.getSymbol(), 
-                        item.getName(),
-                        CURRENCY_FORMAT.format(item.getCurrentPrice()),
-                        item.getAssetType()));
-                }
-            }
-        });
+        // Create the asset selection UI
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(20));
         
-        // Same display format for the selected item
-        stockComboBox.setButtonCell(new ListCell<StockDataService.StockData>() {
-            @Override
-            protected void updateItem(StockDataService.StockData item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(String.format("%s - %s (%s) [%s]", 
-                        item.getSymbol(), 
-                        item.getName(),
-                        CURRENCY_FORMAT.format(item.getCurrentPrice()),
-                        item.getAssetType()));
-                }
-            }
-        });
+        // Asset Type ComboBox
+        Label typeLabel = new Label("Asset Type:");
+        ComboBox<AssetType> assetTypeCombo = new ComboBox<>();
+        assetTypeCombo.getItems().addAll(AssetType.values());
+        assetTypeCombo.setValue(AssetType.STOCK); // Default to stocks
         
-        // Create quantity field
+        // Asset Group ComboBox (will be populated based on type)
+        Label groupLabel = new Label("Asset Group:");
+        ComboBox<String> groupCombo = new ComboBox<>();
+        
+        // Specific Asset ComboBox (will be populated based on group)
+        Label assetLabel = new Label("Specific Asset:");
+        ComboBox<StockDataService.StockData> assetCombo = new ComboBox<>();
+        
+        // Quantity field
+        Label quantityLabel = new Label("Quantity:");
         TextField quantityField = new TextField("1"); // Default quantity
         
-        // Layout
+        // Preview section
+        VBox previewBox = new VBox(5);
+        previewBox.setStyle("-fx-padding: 10; -fx-border-color: #ddd; -fx-border-radius: 5;");
+        
+        Label previewTitle = new Label("Purchase Preview");
+        previewTitle.setStyle("-fx-font-weight: bold;");
+        
+        Label previewPrice = new Label();
+        Label previewTotal = new Label();
+        Label previewBalance = new Label("Available Balance: " + CURRENCY_FORMAT.format(portfolio.getCashBalance()));
+        
+        previewBox.getChildren().addAll(previewTitle, previewPrice, previewTotal, previewBalance);
+        
+        // Initial population of groups
+        populateGroups(assetTypeCombo.getValue(), groupCombo);
+        
+        // Add listeners
+        assetTypeCombo.valueProperty().addListener((obs, oldType, newType) -> {
+            if (newType != null) {
+                populateGroups(newType, groupCombo);
+                groupCombo.getSelectionModel().selectFirst(); // Select first group
+            }
+        });
+        
+        groupCombo.valueProperty().addListener((obs, oldGroup, newGroup) -> {
+            if (newGroup != null) {
+                populateAssets(assetTypeCombo.getValue(), newGroup, assetCombo);
+                assetCombo.getSelectionModel().selectFirst(); // Select first asset
+            }
+        });
+        
+        assetCombo.valueProperty().addListener((obs, oldAsset, newAsset) -> {
+            updatePreview(newAsset, quantityField.getText(), previewPrice, previewTotal);
+        });
+        
+        quantityField.textProperty().addListener((obs, oldText, newText) -> {
+            updatePreview(assetCombo.getValue(), newText, previewPrice, previewTotal);
+        });
+        
+        // Create the layout
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-        grid.add(new Label("Select Asset:"), 0, 0);
-        grid.add(stockComboBox, 1, 0);
-        grid.add(new Label("Quantity:"), 0, 1);
-        grid.add(quantityField, 1, 1);
         
-        dialog.getDialogPane().setContent(grid);
+        grid.add(typeLabel, 0, 0);
+        grid.add(assetTypeCombo, 1, 0);
         
-        // Enable/Disable Add button depending on whether a stock was selected
+        grid.add(groupLabel, 0, 1);
+        grid.add(groupCombo, 1, 1);
+        
+        grid.add(assetLabel, 0, 2);
+        grid.add(assetCombo, 1, 2);
+        
+        grid.add(quantityLabel, 0, 3);
+        grid.add(quantityField, 1, 3);
+        
+        content.getChildren().addAll(grid, previewBox);
+        dialog.getDialogPane().setContent(content);
+        
+        // Enable/Disable Add button depending on selection
         Button addButton = (Button) dialog.getDialogPane().lookupButton(addButtonType);
         addButton.setDisable(true);
         
-        stockComboBox.getSelectionModel().selectedItemProperty().addListener(
+        assetCombo.getSelectionModel().selectedItemProperty().addListener(
             (observable, oldValue, newValue) -> addButton.setDisable(newValue == null));
         
         // Convert the result
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == addButtonType) {
-                StockDataService.StockData selectedStock = stockComboBox.getValue();
-                if (selectedStock != null) {
+                StockDataService.StockData selectedAsset = assetCombo.getValue();
+                if (selectedAsset != null) {
                     try {
                         double quantity = Double.parseDouble(quantityField.getText().trim());
                         if (quantity <= 0) {
                             throw new NumberFormatException("Quantity must be positive");
                         }
-                        return new StockSelectionResult(selectedStock, quantity);
+                        return new StockSelectionResult(selectedAsset, quantity);
                     } catch (NumberFormatException e) {
                         // Show error
                         Alert alert = new Alert(Alert.AlertType.ERROR);
                         alert.setTitle("Invalid Quantity");
                         alert.setHeaderText("Please enter a valid positive number for quantity");
+                        alert.setContentText("Die Anzahl muss positiv sein und darf die vorhandene Anzahl nicht überschreiten.");
                         alert.showAndWait();
                         return null;
                     }
@@ -915,6 +1144,11 @@ public class MainController {
             }
             return null;
         });
+        
+        // Initialize combo boxes
+        if (!groupCombo.getItems().isEmpty()) {
+            groupCombo.getSelectionModel().selectFirst();
+        }
         
         // Show the dialog and process result
         Optional<StockSelectionResult> result = dialog.showAndWait();
@@ -925,14 +1159,14 @@ public class MainController {
             
             // Check if enough cash is available
             if (totalCost > portfolio.getCashBalance()) {
-                showErrorAlert("Nicht genügend Guthaben", 
-                    "Der Gesamtbetrag beträgt " + CURRENCY_FORMAT.format(totalCost) + 
-                    ", aber du hast nur " + CURRENCY_FORMAT.format(portfolio.getCashBalance()) + " verfügbar.",
-                    "Bitte reduziere die Anzahl oder wähle ein günstigeres Asset.");
+                showErrorAlert("Insufficient Funds", 
+                    "The total cost is " + CURRENCY_FORMAT.format(totalCost) + 
+                    ", but you only have " + CURRENCY_FORMAT.format(portfolio.getCashBalance()) + " available.",
+                    "Please reduce the quantity or select a less expensive asset.");
                 return;
             }
             
-            // Create a new holding from the selected stock
+            // Create a new holding from the selected asset
             Holding newHolding = stockDataService.createHoldingFromStock(
                 selection.stock.getSymbol(), 
                 selection.quantity
@@ -943,8 +1177,95 @@ public class MainController {
                 portfolio.deductCash(totalCost);
                 data.add(newHolding);
                 updateDashboard();
+                
+                // Show success message
+                lblStatus.setText("Added " + selection.quantity + " " + 
+                                 selection.stock.getSymbol() + " for " + 
+                                 CURRENCY_FORMAT.format(totalCost));
             }
         });
+    }
+    
+    /**
+     * Populates the group combo box based on asset type
+     */
+    private void populateGroups(AssetType type, ComboBox<String> groupCombo) {
+        groupCombo.getItems().clear();
+        List<String> groups = stockDataService.getAssetGroups(type);
+        groupCombo.getItems().addAll(groups);
+    }
+    
+    /**
+     * Populates the asset combo box based on type and group
+     */
+    private void populateAssets(AssetType type, String group, ComboBox<StockDataService.StockData> assetCombo) {
+        assetCombo.getItems().clear();
+        List<StockDataService.StockData> assets = stockDataService.getPredefinedAssetsByTypeAndGroup(type, group);
+        assetCombo.getItems().addAll(assets);
+        
+        // Custom cell factory for better display
+        assetCombo.setCellFactory(param -> new ListCell<StockDataService.StockData>() {
+            @Override
+            protected void updateItem(StockDataService.StockData item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("%s - %s (%s)", 
+                        item.getSymbol(), 
+                        item.getName(),
+                        CURRENCY_FORMAT.format(item.getCurrentPrice())));
+                }
+            }
+        });
+        
+        // Same for button cell
+        assetCombo.setButtonCell(new ListCell<StockDataService.StockData>() {
+            @Override
+            protected void updateItem(StockDataService.StockData item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("%s - %s", item.getSymbol(), item.getName()));
+                }
+            }
+        });
+    }
+    
+    /**
+     * Updates the preview section with current selection
+     */
+    private void updatePreview(StockDataService.StockData asset, String quantityText, 
+                              Label priceLabel, Label totalLabel) {
+        if (asset == null) {
+            priceLabel.setText("Price: -");
+            totalLabel.setText("Total: -");
+            return;
+        }
+        
+        try {
+            double quantity = Double.parseDouble(quantityText);
+            if (quantity <= 0) quantity = 1;
+            
+            double price = asset.getCurrentPrice();
+            double total = price * quantity;
+            
+            priceLabel.setText("Price: " + CURRENCY_FORMAT.format(price));
+            totalLabel.setText("Total: " + CURRENCY_FORMAT.format(total));
+            
+            // Visual indicator if user can afford it
+            if (total > portfolio.getCashBalance()) {
+                totalLabel.setTextFill(Color.RED);
+            } else {
+                totalLabel.setTextFill(Color.GREEN);
+            }
+            
+        } catch (NumberFormatException e) {
+            priceLabel.setText("Price: " + CURRENCY_FORMAT.format(asset.getCurrentPrice()));
+            totalLabel.setText("Total: (Enter valid quantity)");
+            totalLabel.setTextFill(Color.BLACK);
+        }
     }
     
     /**
@@ -1104,11 +1425,16 @@ public class MainController {
         });
         
         // Add all columns to the table
-        performanceTable.getColumns().addAll(
-            symbolCol, nameCol, typeCol, qtyCol, 
-            purchasePriceCol, currentPriceCol, 
-            changeCol, changePctCol, 
-            valueCol, profitLossCol);
+        performanceTable.getColumns().add(symbolCol);
+        performanceTable.getColumns().add(nameCol);
+        performanceTable.getColumns().add(typeCol);
+        performanceTable.getColumns().add(qtyCol);
+        performanceTable.getColumns().add(purchasePriceCol);
+        performanceTable.getColumns().add(currentPriceCol);
+        performanceTable.getColumns().add(changeCol);
+        performanceTable.getColumns().add(changePctCol);
+        performanceTable.getColumns().add(valueCol);
+        performanceTable.getColumns().add(profitLossCol);
         
         // Set data
         performanceTable.setItems(FXCollections.observableArrayList(stocks));

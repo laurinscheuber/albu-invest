@@ -16,6 +16,7 @@
 <?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.CategoryAxis?>
 <?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.chart.PieChart?>
 <?import javafx.scene.text.Font?>
 
 <BorderPane xmlns="http://javafx.com/javafx/17" 
@@ -25,17 +26,14 @@
             <!-- Main Toolbar -->
             <ToolBar>
                 <items>
-                    <!-- Action Buttons -->
-                    <Button fx:id="btnAdd" text="Add Holding" onAction="#add" style="-fx-base: #4CAF50;"/> <!-- Green Add -->
-                    <Button fx:id="btnEdit" text="Edit Selected" onAction="#edit" style="-fx-base: #FFC107;"/> <!-- Amber Edit -->
-                    <Button fx:id="btnDelete" text="Delete Selected" onAction="#delete" style="-fx-base: #F44336;"/> <!-- Red Delete -->
+                    <!-- Buy Assets button - prominent on the left -->
+                    <Button fx:id="btnAddStock" text="Buy Assets" onAction="#addPredefinedStocksAction" 
+                            style="-fx-base: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 8 15;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <!-- Keep Sell button -->
                     <Button fx:id="btnSell" text="Verkaufen" onAction="#sellHolding" style="-fx-base: #FF9800;"/> <!-- Orange for Sell -->
                     <Separator orientation="VERTICAL" />
-                    <Button fx:id="btnAddStock" text="Add Predefined Stock" onAction="#addPredefinedStocksAction" style="-fx-base: #3F51B5;"/> <!-- Indigo for Stocks -->
-                    <Button fx:id="btnPerformance" text="Show Performance" onAction="#showPerformanceView" style="-fx-base: #9C27B0;"/> <!-- Purple for Performance -->
-                    <Separator orientation="VERTICAL" />
-                    <Button fx:id="btnChart" text="View Allocation Chart" onAction="#showChart" style="-fx-base: #2196F3;"/> <!-- Blue Chart -->
-                    <Separator orientation="VERTICAL" />
+                    <!-- Reset button -->
                     <Button fx:id="btnReset" text="Reset Portfolio" onAction="#resetPortfolio" style="-fx-base: #795548;"/> <!-- Brown for Reset -->
                 </items>
                 <padding>
@@ -89,25 +87,28 @@
                             <Label text="Profit/Loss (%)" style="-fx-text-fill: #666;" />
                             <Label fx:id="lblProfitLossPercent" text="0.00%" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
                         </VBox>
-                        
-                        <!-- Total Invested -->
-                        <VBox GridPane.columnIndex="2" GridPane.rowIndex="1">
-                            <Label text="Total Invested" style="-fx-text-fill: #666;" />
-                            <Label fx:id="lblTotalInvested" text="CHF 0.00" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
-                        </VBox>
                     </GridPane>
                 </VBox>
                 
-                <!-- Performance Trend Chart (Mini) -->
-                <VBox alignment="CENTER" minWidth="200">
-                    <Label text="Performance Trend" style="-fx-text-fill: #666;" />
+                <!-- Asset Allocation Pie Chart -->
+                <VBox alignment="CENTER" minWidth="200" maxWidth="200">
+                    <Label text="Asset Allocation" style="-fx-text-fill: #666; -fx-font-weight: bold;" />
+                    <PieChart fx:id="allocationChart" legendVisible="true" labelsVisible="false"
+                              prefHeight="100" maxHeight="100" minHeight="100" />
+                </VBox>
+                
+                <!-- Performance Trend Chart (Mini) - Improved styling -->
+                <VBox alignment="CENTER" minWidth="200" maxWidth="200">
+                    <Label text="Performance Trend" style="-fx-text-fill: #666; -fx-font-weight: bold;" />
                     <LineChart fx:id="miniChart" legendVisible="false" animated="false" createSymbols="false"
-                              prefHeight="80" maxHeight="80" minHeight="80">
+                              prefHeight="100" maxHeight="100" minHeight="100"
+                              style="-fx-background-color: transparent; -fx-border-color: transparent;">
                         <xAxis>
                             <CategoryAxis side="BOTTOM" tickLabelsVisible="false" tickMarkVisible="false" />
                         </xAxis>
                         <yAxis>
-                            <NumberAxis side="LEFT" tickLabelsVisible="false" tickMarkVisible="false" />
+                            <NumberAxis side="LEFT" tickLabelsVisible="false" tickMarkVisible="false" 
+                                       autoRanging="true" minorTickVisible="false" />
                         </yAxis>
                     </LineChart>
                 </VBox>
@@ -115,65 +116,28 @@
         </VBox>
     </top>
 
-    <!-- New layout: Split the center into a table and a sidebar for charts -->
     <center>
-        <BorderPane>
-            <center>
-                <!-- Holdings Table with Enhanced Columns -->
-                <TableView fx:id="holdingsTable" BorderPane.alignment="CENTER">
-                    <columns>
-                        <!-- Define Table Columns - fx:id links to Controller fields -->
-                        <TableColumn fx:id="colSymbol" text="Symbol" prefWidth="80.0" style="-fx-alignment: CENTER-LEFT;"/>
-                        <TableColumn fx:id="colName" text="Name" prefWidth="180.0" style="-fx-alignment: CENTER-LEFT;"/>
-                        <TableColumn fx:id="colQty" text="Quantity" prefWidth="80.0" style="-fx-alignment: CENTER-RIGHT;"/>
-                        <TableColumn fx:id="colBuyPrice" text="Buy Price" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
-                        <TableColumn fx:id="colPrice" text="Current Price" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
-                        <TableColumn fx:id="colPriceChange" text="Price Change" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
-                        <TableColumn fx:id="colPriceChangePct" text="Change %" prefWidth="80.0" style="-fx-alignment: CENTER-RIGHT;"/>
-                        <TableColumn fx:id="colValue" text="Current Value" prefWidth="120.0" style="-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;"/>
-                        <TableColumn fx:id="colProfitLoss" text="Profit/Loss" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
-                        <TableColumn fx:id="colType" text="Type" prefWidth="80.0" style="-fx-alignment: CENTER;"/>
-                        <TableColumn fx:id="colChart" text="Performance" prefWidth="150.0" style="-fx-alignment: CENTER;"/>
-                    </columns>
-                    <!-- Set column resize policy directly -->
-                    <columnResizePolicy>
-                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                    </columnResizePolicy>
-                </TableView>
-            </center>
-            
-            <!-- Right sidebar with allocation chart -->
-            <right>
-                <VBox alignment="TOP_CENTER" spacing="10" minWidth="250" maxWidth="300" style="-fx-background-color: #f8f8f8; -fx-border-color: #ddd; -fx-border-width: 0 0 0 1;">
-                    <padding>
-                        <Insets top="15.0" right="10.0" bottom="10.0" left="10.0" />
-                    </padding>
-                    
-                    <Label text="Asset Allocation" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
-                    
-                    <!-- Allocation Pie Chart -->
-                    <javafx.scene.chart.PieChart fx:id="allocationChart" legendVisible="true" labelsVisible="true"
-                                                titleVisible="false" prefHeight="200" />
-                    
-                    <!-- Detailed performance chart can be added here -->
-                    <Label text="Extended Performance" style="-fx-font-weight: bold; -fx-font-size: 14px;">
-                        <VBox.margin>
-                            <Insets top="10.0" />
-                        </VBox.margin>
-                    </Label>
-                    
-                    <LineChart fx:id="extendedPerformanceChart" legendVisible="false" animated="false" createSymbols="true"
-                              prefHeight="200">
-                        <xAxis>
-                            <CategoryAxis side="BOTTOM" label="Time" />
-                        </xAxis>
-                        <yAxis>
-                            <NumberAxis side="LEFT" label="Value (CHF)" />
-                        </yAxis>
-                    </LineChart>
-                </VBox>
-            </right>
-        </BorderPane>
+        <!-- Holdings Table with Enhanced Columns -->
+        <TableView fx:id="holdingsTable" BorderPane.alignment="CENTER">
+            <columns>
+                <!-- Define Table Columns - fx:id links to Controller fields -->
+                <TableColumn fx:id="colSymbol" text="Symbol" prefWidth="80.0" style="-fx-alignment: CENTER-LEFT;"/>
+                <TableColumn fx:id="colName" text="Name" prefWidth="180.0" style="-fx-alignment: CENTER-LEFT;"/>
+                <TableColumn fx:id="colQty" text="Quantity" prefWidth="80.0" style="-fx-alignment: CENTER-RIGHT;"/>
+                <TableColumn fx:id="colBuyPrice" text="Buy Price" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
+                <TableColumn fx:id="colPrice" text="Current Price" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
+                <TableColumn fx:id="colPriceChange" text="Price Change" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
+                <TableColumn fx:id="colPriceChangePct" text="Change %" prefWidth="80.0" style="-fx-alignment: CENTER-RIGHT;"/>
+                <TableColumn fx:id="colValue" text="Current Value" prefWidth="120.0" style="-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;"/>
+                <TableColumn fx:id="colProfitLoss" text="Profit/Loss" prefWidth="100.0" style="-fx-alignment: CENTER-RIGHT;"/>
+                <TableColumn fx:id="colType" text="Type" prefWidth="80.0" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="colChart" text="Performance" prefWidth="150.0" style="-fx-alignment: CENTER;"/>
+            </columns>
+            <!-- Set column resize policy directly -->
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+            </columnResizePolicy>
+        </TableView>
     </center>
     
     <bottom>

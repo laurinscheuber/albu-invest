@@ -8,7 +8,6 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Objects;
 
 /**
  * The main entry point for the InvestTrack JavaFX application.
@@ -42,22 +41,22 @@ public class MainApp extends Application {
 
         // Create a new FXMLLoader and set the controller manually
         FXMLLoader loader = new FXMLLoader(fxmlUrl);
+        // Set the controller explicitly (since we removed fx:controller from FXML)
         loader.setController(new com.investtrack.view.MainController());
         
         // Load the FXML file to create the root UI node
         Parent root = loader.load();
 
-        // Create the scene with the loaded UI root
-        Scene scene = new Scene(root); // Let FXML define preferred size, or set explicitly: new Scene(root, 800, 600);
+        // Create the scene with the loaded UI root (using full screen dimensions)
+        Scene scene = new Scene(root, 1200, 800);
 
         // Configure the primary stage (window)
         primaryStage.setTitle("Investment Portfolio Tracker");
         primaryStage.setScene(scene);
 
-        // Set minimum dimensions if desired
-        primaryStage.setMinWidth(600);
-        primaryStage.setMinHeight(400);
-
+        // Set minimum dimensions
+        primaryStage.setMinWidth(900);
+        primaryStage.setMinHeight(600);
 
         // Show the stage
         primaryStage.show();
