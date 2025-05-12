@@ -1,0 +1,23 @@
+# Maven build directory
+target/
+
+# Compiled class files
+*.class
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Application-specific artifacts
+dependency-reduced-pom.xml
+
+# Claude Anthropic files
+CLAUDE.md

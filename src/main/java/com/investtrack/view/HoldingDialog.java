@@ -117,26 +117,58 @@ public class HoldingDialog extends Dialog<Holding> {
      */
     private GridPane createLayout() {
         GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-        
+        grid.setHgap(16);
+        grid.setVgap(16);
+        grid.setPadding(new Insets(24, 24, 24, 24));
+        grid.getStyleClass().add("dialog-grid");
+
+        // Set column constraints
+        javafx.scene.layout.ColumnConstraints labelCol = new javafx.scene.layout.ColumnConstraints();
+        labelCol.setMinWidth(120);
+        labelCol.setHgrow(javafx.scene.layout.Priority.NEVER);
+
+        javafx.scene.layout.ColumnConstraints fieldCol = new javafx.scene.layout.ColumnConstraints();
+        fieldCol.setMinWidth(250);
+        fieldCol.setPrefWidth(300);
+        fieldCol.setHgrow(javafx.scene.layout.Priority.ALWAYS);
+
+        grid.getColumnConstraints().addAll(labelCol, fieldCol);
+
+        // Stylize the text fields and labels
+        symbolTextField.setPrefWidth(Double.MAX_VALUE);
+        nameTextField.setPrefWidth(Double.MAX_VALUE);
+        quantityTextField.setPrefWidth(Double.MAX_VALUE);
+        priceTextField.setPrefWidth(Double.MAX_VALUE);
+        assetTypeComboBox.setPrefWidth(Double.MAX_VALUE);
+
+        // Create labels with consistent styling
+        Label symbolLabel = new Label("Symbol:");
+        Label nameLabel = new Label("Name:");
+        Label quantityLabel = new Label("Quantity:");
+        Label priceLabel = new Label("Price per Unit:");
+        Label assetTypeLabel = new Label("Asset Type:");
+
+        // Optional: Add style class to labels
+        for (Label label : new Label[]{symbolLabel, nameLabel, quantityLabel, priceLabel, assetTypeLabel}) {
+            label.getStyleClass().add("dialog-label");
+        }
+
         // Add labels and fields to grid
-        grid.add(new Label("Symbol:"), 0, 0);
+        grid.add(symbolLabel, 0, 0);
         grid.add(symbolTextField, 1, 0);
-        
-        grid.add(new Label("Name:"), 0, 1);
+
+        grid.add(nameLabel, 0, 1);
         grid.add(nameTextField, 1, 1);
-        
-        grid.add(new Label("Quantity:"), 0, 2);
+
+        grid.add(quantityLabel, 0, 2);
         grid.add(quantityTextField, 1, 2);
-        
-        grid.add(new Label("Price per Unit:"), 0, 3);
+
+        grid.add(priceLabel, 0, 3);
         grid.add(priceTextField, 1, 3);
-        
-        grid.add(new Label("Asset Type:"), 0, 4);
+
+        grid.add(assetTypeLabel, 0, 4);
         grid.add(assetTypeComboBox, 1, 4);
-        
+
         return grid;
     }
     
