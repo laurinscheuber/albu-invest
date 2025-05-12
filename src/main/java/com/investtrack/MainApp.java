@@ -43,20 +43,24 @@ public class MainApp extends Application {
         FXMLLoader loader = new FXMLLoader(fxmlUrl);
         // Set the controller explicitly (since we removed fx:controller from FXML)
         loader.setController(new com.investtrack.view.MainController());
-        
+
         // Load the FXML file to create the root UI node
         Parent root = loader.load();
 
         // Create the scene with the loaded UI root (using full screen dimensions)
-        Scene scene = new Scene(root, 1200, 800);
+        Scene scene = new Scene(root, 1280, 800);
+
+        // Load the default CSS stylesheet
+        String cssPath = "/com/investtrack/view/ModernStyle.css";
+        scene.getStylesheets().add(getClass().getResource(cssPath).toExternalForm());
 
         // Configure the primary stage (window)
-        primaryStage.setTitle("Investment Portfolio Tracker");
+        primaryStage.setTitle("InvestTrack - Modern Portfolio Manager");
         primaryStage.setScene(scene);
 
-        // Set minimum dimensions
-        primaryStage.setMinWidth(900);
-        primaryStage.setMinHeight(600);
+        // Set minimum dimensions to ensure UI elements have enough space
+        primaryStage.setMinWidth(1024);
+        primaryStage.setMinHeight(768);
 
         // Show the stage
         primaryStage.show();

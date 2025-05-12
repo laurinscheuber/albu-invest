@@ -1,0 +1,406 @@
+/* Modern Style CSS for InvestTrack Application */
+
+/* Color Palette */
+* {
+    -fx-primary: #2A3990;           /* Primary blue */
+    -fx-primary-light: #3B4DB8;     /* Lighter blue for hover states */
+    -fx-secondary: #4ECB71;         /* Success green */
+    -fx-warning: #FF9F43;           /* Warning orange */
+    -fx-danger: #EA5455;            /* Danger red */
+    -fx-neutral-dark: #2D3748;      /* Dark gray */
+    -fx-neutral: #4A5568;           /* Medium gray */
+    -fx-neutral-light: #E2E8F0;     /* Light gray for backgrounds */
+    -fx-white: #FFFFFF;             /* White */
+    -fx-card-bg: #F8FAFC;           /* Card background */
+}
+
+/* Base Application Styling */
+.root {
+    -fx-background-color: -fx-neutral-light;
+    -fx-font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    -fx-font-size: 13px;
+}
+
+/* ToolBar Styling */
+.tool-bar {
+    -fx-background-color: -fx-white;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 2);
+    -fx-padding: 8px 16px;
+    -fx-spacing: 10px;
+}
+
+/* Button Styling */
+.button {
+    -fx-background-color: -fx-neutral-light;
+    -fx-text-fill: -fx-neutral-dark;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+    -fx-border-color: transparent;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+    -fx-font-weight: normal;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 2, 0, 0, 1);
+}
+
+.button:hover {
+    -fx-background-color: derive(-fx-neutral-light, -5%);
+}
+
+.button:pressed {
+    -fx-background-color: derive(-fx-neutral-light, -10%);
+}
+
+/* Primary Action Button */
+.button-primary {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-white;
+    -fx-font-weight: bold;
+}
+
+.button-primary:hover {
+    -fx-background-color: -fx-primary-light;
+}
+
+.button-primary:pressed {
+    -fx-background-color: derive(-fx-primary, -10%);
+}
+
+/* Success Button */
+.button-success {
+    -fx-background-color: -fx-secondary;
+    -fx-text-fill: -fx-white;
+}
+
+.button-success:hover {
+    -fx-background-color: derive(-fx-secondary, 10%);
+}
+
+/* Warning Button */
+.button-warning {
+    -fx-background-color: -fx-warning;
+    -fx-text-fill: -fx-white;
+}
+
+.button-warning:hover {
+    -fx-background-color: derive(-fx-warning, 10%);
+}
+
+/* Danger Button */
+.button-danger {
+    -fx-background-color: -fx-danger;
+    -fx-text-fill: -fx-white;
+}
+
+.button-danger:hover {
+    -fx-background-color: derive(-fx-danger, 10%);
+}
+
+/* Label Styling */
+.label {
+    -fx-text-fill: -fx-neutral;
+}
+
+.label-header {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-neutral-dark;
+}
+
+.label-subheader {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-neutral-dark;
+}
+
+.label-value {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-neutral-dark;
+}
+
+.label-positive {
+    -fx-text-fill: -fx-secondary;
+}
+
+.label-negative {
+    -fx-text-fill: -fx-danger;
+}
+
+/* Card Styling for Dashboard Sections */
+.card {
+    -fx-background-color: -fx-white;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 8, 0, 0, 2);
+    -fx-padding: 16px;
+}
+
+/* Dashboard Header */
+.dashboard-header {
+    -fx-background-color: -fx-white;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 2, 0, 0, 1);
+}
+
+/* Responsive Dashboard Layout */
+.dashboard-header {
+    -fx-pref-width: 100%;
+}
+
+.dashboard-container {
+    -fx-fill-width: true;
+    -fx-pref-width: 100%;
+    -fx-min-width: 300px;
+}
+
+/* Metric containers for responsive layouts */
+.metric-container {
+    -fx-min-width: 120px;
+    -fx-pref-width: 150px;
+    -fx-max-width: 200px;
+    -fx-padding: 8px 0;
+}
+
+/* Visual containers for responsive charts */
+.chart-container {
+    -fx-min-width: 180px;
+    -fx-pref-width: 200px;
+    -fx-max-width: 300px;
+    -fx-padding: 8px 0;
+}
+
+/* TableView Styling */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-table-cell-border-color: transparent;
+    -fx-padding: 0px;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: -fx-primary;
+    -fx-background-radius: 8px 8px 0px 0px;
+    -fx-padding: 0 0 8px 0;
+}
+
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: transparent;
+    -fx-size: 40px;
+    -fx-border-color: transparent;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: -fx-white;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: -fx-white;
+    -fx-border-color: transparent;
+    -fx-table-cell-border-color: transparent;
+    -fx-padding: 5px;
+}
+
+.table-view .table-row-cell:odd {
+    -fx-background-color: derive(-fx-white, -2%);
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: derive(-fx-primary, 80%);
+    -fx-text-fill: -fx-neutral-dark;
+}
+
+.table-view .table-cell {
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 8px;
+    -fx-text-fill: -fx-neutral-dark;
+}
+
+/* ScrollBar Styling */
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color: derive(-fx-neutral-light, -20%);
+    -fx-background-radius: 4px;
+}
+
+.scroll-bar:vertical .thumb:hover {
+    -fx-background-color: derive(-fx-neutral-light, -30%);
+}
+
+/* Chart Styling */
+.chart {
+    -fx-padding: 10px;
+    -fx-background-color: transparent;
+}
+
+.chart-legend {
+    -fx-background-color: transparent;
+}
+
+.chart-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-neutral-dark;
+}
+
+.chart-plot-background {
+    -fx-background-color: transparent;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: derive(-fx-neutral-light, -10%);
+    -fx-stroke-dash-array: 1 4;
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: derive(-fx-neutral-light, -10%);
+    -fx-stroke-dash-array: 1 4;
+}
+
+/* PieChart specific styling */
+.chart-pie {
+    -fx-border-color: derive(-fx-neutral-light, -10%);
+    -fx-border-width: 1px;
+}
+
+.chart-pie-label {
+    -fx-fill: -fx-neutral-dark;
+}
+
+.chart-pie-label-line {
+    -fx-stroke: -fx-neutral;
+    -fx-fill: -fx-neutral;
+}
+
+/* LineChart specific styling */
+.chart-series-line {
+    -fx-stroke-width: 2px;
+}
+
+.default-color0.chart-series-line { -fx-stroke: -fx-primary; }
+.default-color1.chart-series-line { -fx-stroke: -fx-secondary; }
+.default-color2.chart-series-line { -fx-stroke: -fx-warning; }
+.default-color3.chart-series-line { -fx-stroke: -fx-danger; }
+
+.default-color0.chart-line-symbol { -fx-background-color: -fx-primary, -fx-white; }
+.default-color1.chart-line-symbol { -fx-background-color: -fx-secondary, -fx-white; }
+.default-color2.chart-line-symbol { -fx-background-color: -fx-warning, -fx-white; }
+.default-color3.chart-line-symbol { -fx-background-color: -fx-danger, -fx-white; }
+
+/* Status Bar Styling */
+.status-bar {
+    -fx-background-color: -fx-white;
+    -fx-padding: 5px 10px;
+    -fx-border-width: 1px 0 0 0;
+    -fx-border-color: derive(-fx-neutral-light, -5%);
+}
+
+/* Mini Chart in Table */
+.mini-chart {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-legend-visible: false;
+}
+
+.mini-chart .chart-content {
+    -fx-padding: 0;
+}
+
+/* Dialog Styling */
+.dialog-pane {
+    -fx-background-color: -fx-white;
+}
+
+.dialog-pane .label {
+    -fx-text-fill: -fx-neutral-dark;
+}
+
+.dialog-pane:header .header-panel {
+    -fx-background-color: -fx-neutral-light;
+}
+
+.dialog-pane:header .header-panel .label {
+    -fx-text-fill: -fx-neutral-dark;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.dialog-pane .button {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-white;
+    -fx-wrap-text: true;
+    -fx-cursor: hand;
+}
+
+.dialog-pane .button:hover {
+    -fx-background-color: -fx-primary-light;
+}
+
+/* Text Field Styling */
+.text-field {
+    -fx-background-color: -fx-white;
+    -fx-background-radius: 4px;
+    -fx-border-color: derive(-fx-neutral-light, -10%);
+    -fx-border-radius: 4px;
+    -fx-padding: 8px;
+}
+
+.text-field:focused {
+    -fx-border-color: -fx-primary;
+}
+
+/* Combo Box Styling */
+.combo-box {
+    -fx-background-color: -fx-white;
+    -fx-background-radius: 4px;
+    -fx-border-color: derive(-fx-neutral-light, -10%);
+    -fx-border-radius: 4px;
+    -fx-padding: 4px;
+}
+
+.combo-box:focused {
+    -fx-border-color: -fx-primary;
+}
+
+.combo-box .list-cell {
+    -fx-padding: 4px 8px;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: -fx-white;
+    -fx-border-color: derive(-fx-neutral-light, -10%);
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-padding: 6px 10px;
+}
+
+.combo-box-popup .list-view .list-cell:filled:selected, 
+.combo-box-popup .list-view .list-cell:filled:selected:hover {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-white;
+}
+
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: derive(-fx-neutral-light, -5%);
+}
+
+/* Separator */
+.separator {
+    -fx-background-color: derive(-fx-neutral-light, -10%);
+}
+
+.separator:vertical .line {
+    -fx-border-color: derive(-fx-neutral-light, -10%);
+    -fx-border-width: 0 1 0 0;
+}
+
+.separator:horizontal .line {
+    -fx-border-color: derive(-fx-neutral-light, -10%);
+    -fx-border-width: 0 0 1 0;
+}

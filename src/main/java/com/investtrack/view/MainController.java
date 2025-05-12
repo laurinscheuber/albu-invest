@@ -7,6 +7,7 @@ import com.investtrack.model.PortfolioSnapshot;
 import com.investtrack.persistence.PortfolioRepository;
 import com.investtrack.service.StockDataService;
 
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -36,6 +37,7 @@ import javafx.stage.StageStyle;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -84,6 +86,9 @@ public class MainController {
     
     // Buttons
     @FXML private Button btnSell;
+    @FXML private Button btnToggleTheme;  // Theme toggle button
+
+    // --- Theme state (removed) ---
 
     // --- Datenmodell & Persistenz ---
     private PortfolioRepository repo;
@@ -143,6 +148,11 @@ public class MainController {
                 (obs, oldSelection, newSelection) -> updateEditDeleteButtonState()
         );
 
+        // Remove theme toggle button functionality
+        if (btnToggleTheme != null) {
+            btnToggleTheme.setVisible(false);
+        }
+
         // 7. Listener für Datenänderungen hinzufügen
         data.addListener((javafx.collections.ListChangeListener.Change<? extends Holding> c) -> {
             boolean changed = false;
@@ -179,68 +189,81 @@ public class MainController {
     }
     
     /**
-     * Initialisiert das Mini-Chart im Dashboard-Header mit verbesserter Zoom-Funktion
+     * Initializes the mini performance chart in the dashboard header with improved styling and zoom function
      */
     private void initializeMiniChart() {
-        // Vorhandene Daten löschen
+        // Clear existing data
         miniChart.getData().clear();
-        
-        // Serie für den Portfolio-Wert erstellen
+
+        // Create series for portfolio value
         XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Portfolio-Wert");
-        
-        // Wenn wir historische Daten haben, fügen wir sie dem Chart hinzu
+        series.setName("Portfolio Value");
+
+        // Add historical data if available
         if (!portfolio.getPerformanceHistory().isEmpty()) {
-            // Nehmen Sie nur die letzten 5 Snapshots für besser sichtbare Schwankungen (gezoomte Ansicht)
+            // Use the last 5 snapshots for better visible fluctuations (zoomed view)
             List<PortfolioSnapshot> history = portfolio.getPerformanceHistory();
             int startIndex = Math.max(0, history.size() - 5);
-            
+
             double minValue = Double.MAX_VALUE;
             double maxValue = Double.MIN_VALUE;
-            
+
             for (int i = startIndex; i < history.size(); i++) {
                 PortfolioSnapshot snapshot = history.get(i);
                 String timeLabel = snapshot.getTimestamp().format(TIME_FORMATTER);
                 double value = snapshot.getTotalAssetValue();
                 series.getData().add(new XYChart.Data<>(timeLabel, value));
-                
-                // Min/Max-Werte für bessere Y-Achsen-Skalierung verfolgen
+
+                // Track min/max values for better Y-axis scaling
                 minValue = Math.min(minValue, value);
                 maxValue = Math.max(maxValue, value);
             }
-            
-            // Benutzerdefinierten Bereich für die Y-Achse festlegen, um die Sichtbarkeit von Schwankungen zu verbessern
+
+            // Custom Y-axis range to improve visibility of fluctuations
             NumberAxis yAxis = (NumberAxis) miniChart.getYAxis();
             if (minValue != Double.MAX_VALUE && maxValue != Double.MIN_VALUE) {
-                // 2% Padding für bessere Sichtbarkeit erstellen
+                // Add 5% padding for better visibility
                 double range = maxValue - minValue;
-                double padding = range * 0.02;
+                double padding = range * 0.05;
                 yAxis.setAutoRanging(false);
-                yAxis.setLowerBound(Math.max(0, minValue - padding)); // Nie unter Null gehen
+                yAxis.setLowerBound(Math.max(0, minValue - padding)); // Never go below zero
                 yAxis.setUpperBound(maxValue + padding);
-                yAxis.setTickUnit(range / 4); // Vernünftige Anzahl von Ticks erstellen
+                yAxis.setTickUnit(range / 4); // Reasonable number of ticks
+                yAxis.setMinorTickVisible(false);
             }
         } else {
-            // Aktuellen Punkt hinzufügen, wenn keine Historie vorhanden ist
-            series.getData().add(new XYChart.Data<>("Jetzt", portfolio.getTotalAssetValue()));
+            // Add current point if no history exists
+            series.getData().add(new XYChart.Data<>("Now", portfolio.getTotalAssetValue()));
         }
-        
-        // Serie zum Chart hinzufügen
+
+        // Add series to chart
         miniChart.getData().add(series);
-        
-        // Serie stylen
-        series.getNode().setStyle("-fx-stroke: #4caf50; -fx-stroke-width: 2px;");
-        
-        // Zoom-Funktionalität hinzufügen (Kontextmenü mit Zoom-Optionen)
+
+        // Modern chart styling
+        miniChart.setAnimated(false);
+        miniChart.setCreateSymbols(false);
+        miniChart.setLegendVisible(false);
+
+        // Background styling
+        miniChart.lookup(".chart-plot-background").setStyle("-fx-background-color: transparent;");
+
+        // Apply style class to data
+        for (XYChart.Data<String, Number> data : series.getData()) {
+            if (data.getNode() != null) {
+                data.getNode().getStyleClass().add("chart-line-symbol");
+            }
+        }
+
+        // Zoom functionality with context menu
         ContextMenu contextMenu = new ContextMenu();
-        MenuItem zoomInItem = new MenuItem("Hineinzoomen (Letzte 3 Punkte)");
-        MenuItem zoomMediumItem = new MenuItem("Mittlere Ansicht (Letzte 5 Punkte)");
-        MenuItem zoomOutItem = new MenuItem("Herauszoomen (Alle Punkte)");
-        
+        MenuItem zoomInItem = new MenuItem("Zoom In (Last 3 Points)");
+        MenuItem zoomMediumItem = new MenuItem("Medium View (Last 5 Points)");
+        MenuItem zoomOutItem = new MenuItem("Zoom Out (All Points)");
+
         zoomInItem.setOnAction(e -> updateMiniChartZoom(3));
         zoomMediumItem.setOnAction(e -> updateMiniChartZoom(5));
-        zoomOutItem.setOnAction(e -> updateMiniChartZoom(0)); // 0 bedeutet alle Punkte
-        
+        zoomOutItem.setOnAction(e -> updateMiniChartZoom(0)); // 0 means all points
+
         contextMenu.getItems().addAll(zoomInItem, zoomMediumItem, zoomOutItem);
         miniChart.setOnContextMenuRequested(e -> contextMenu.show(miniChart, e.getScreenX(), e.getScreenY()));
     }
@@ -305,92 +328,154 @@ public class MainController {
     }
     
     /**
-     * Initialisiert das Zuordnungs-Chart im Dashboard mit verbessertem Styling
+     * Initializes the asset allocation chart in the dashboard with improved styling
      */
     private void initializeAllocationChart() {
-        // Vorhandene Daten löschen
+        // Clear existing data
         if (allocationChart != null) {
             allocationChart.getData().clear();
-            
-            // Wenn wir Bestände haben, befüllen wir das Chart
+
+            // Populate chart if we have holdings
             if (!data.isEmpty()) {
                 updateAllocationChart();
             } else {
-                // Einen Platzhalter hinzufügen, wenn keine Bestände vorhanden sind
-                PieChart.Data cashData = new PieChart.Data("Bargeld (100%)", portfolio.getCashBalance());
+                // Add a placeholder if no holdings exist
+                PieChart.Data cashData = new PieChart.Data("Cash (100%)", portfolio.getCashBalance());
                 allocationChart.getData().add(cashData);
-                
-                // Tooltip hinzufügen, um den Bargeldbetrag anzuzeigen
+
+                // Set modern styling for the cash segment
+                if (cashData.getNode() != null) {
+                    cashData.getNode().getStyleClass().add("pie-chart-cash");
+                }
+
+                // Add tooltip to show cash amount
                 Tooltip tooltip = new Tooltip(
-                    String.format("Barguthaben: %s", CURRENCY_FORMAT.format(portfolio.getCashBalance()))
+                    String.format("Cash Balance: %s", CURRENCY_FORMAT.format(portfolio.getCashBalance()))
                 );
+                tooltip.setStyle("-fx-font-size: 12px; -fx-font-weight: normal;");
                 Tooltip.install(cashData.getNode(), tooltip);
             }
-            
-            // Saubereres Styling auf das Chart anwenden und Animation deaktivieren
+
+            // Apply modern styling to the chart
             allocationChart.setStyle("-fx-background-color: transparent;");
-            allocationChart.setLegendSide(javafx.geometry.Side.RIGHT);
-            allocationChart.setAnimated(false);
-            allocationChart.setLabelsVisible(true); // Labels auf den Kreissegmenten anzeigen
+            allocationChart.setLegendVisible(false); // Hide legend since we use tooltips
+            allocationChart.setAnimated(false); // Disable animations for better performance
+            allocationChart.setLabelsVisible(false); // Hide labels for cleaner look
+            allocationChart.setStartAngle(90); // Start angle for better visual appearance
+
+            // Add click event for showing detailed allocation view
+            allocationChart.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) {
+                    showChart(); // Show detailed chart on double-click
+                }
+            });
+
+            // Add tooltip to instruct users about double-click functionality
+            Tooltip chartTooltip = new Tooltip("Double-click to view detailed allocation");
+            Tooltip.install(allocationChart, chartTooltip);
         }
     }
     
     /**
-     * Aktualisiert das Zuordnungs-Chart mit aktuellen Portfolio-Daten
+     * Updates the allocation chart with current portfolio data and modern styling
      */
     private void updateAllocationChart() {
         if (allocationChart == null) return;
-        
-        // Vorhandene Daten löschen
+
+        // Clear existing data
         allocationChart.getData().clear();
-        
+
         double totalAssets = portfolio.getTotalAssetValue();
         double cashBalance = portfolio.getCashBalance();
-        
-        // Zuerst ein Segment für Bargeld hinzufügen, wenn wir Bargeld haben
+
+        // Modern color palette with carefully selected colors for better visual distinction
+        Map<AssetType, String> colorMap = new HashMap<>();
+        colorMap.put(AssetType.CASH, "#4ECB71");      // Green for cash
+        colorMap.put(AssetType.STOCK, "#2A3990");     // Blue for stocks
+        colorMap.put(AssetType.CRYPTO, "#9C27B0");    // Purple for crypto
+        colorMap.put(AssetType.ETF, "#FF9F43");       // Orange for ETFs
+        colorMap.put(AssetType.FUND, "#3B4DB8");      // Light blue for funds
+        colorMap.put(AssetType.BOND, "#4A5568");      // Gray for bonds
+        colorMap.put(AssetType.OTHER, "#EA5455");     // Red for other assets
+
+        // First add a segment for cash if we have cash
         if (cashBalance > 0) {
             double cashPercentage = (cashBalance / totalAssets) * 100;
             PieChart.Data cashData = new PieChart.Data(
-                String.format("Bargeld (%.1f%%)", cashPercentage), 
+                String.format("Cash (%.1f%%)", cashPercentage),
                 cashBalance
             );
             allocationChart.getData().add(cashData);
-            
-            // Das Bargeld-Segment stylen
-            cashData.getNode().setStyle("-fx-pie-color: #4CAF50;"); // Grün für Bargeld
-            
-            // Tooltip hinzufügen, um den Bargeldbetrag anzuzeigen
+
+            // Apply stylesheet class for better styling
+            if (cashData.getNode() != null) {
+                cashData.getNode().getStyleClass().add("cash-slice");
+
+                // Also apply direct color styling as fallback
+                cashData.getNode().setStyle("-fx-pie-color: " + colorMap.get(AssetType.CASH) + ";");
+            }
+
+            // Enhanced tooltip with better formatting
             Tooltip tooltip = new Tooltip(
-                String.format("Barguthaben: %s", CURRENCY_FORMAT.format(portfolio.getCashBalance()))
+                String.format("Cash Balance: %s (%.1f%%)",
+                    CURRENCY_FORMAT.format(portfolio.getCashBalance()),
+                    cashPercentage)
             );
+            tooltip.setStyle("-fx-font-size: 12px;");
             Tooltip.install(cashData.getNode(), tooltip);
         }
-        
-        // Dann Segmente für jeden Asset-Typ mit lebendigen Farben hinzufügen
-        String[] colors = {"#2196F3", "#FFC107", "#9C27B0", "#F44336", "#3F51B5", "#FF9800", "#795548"};
-        AtomicInteger colorIndex = new AtomicInteger(0);
-        
-        data.stream()
-            .collect(Collectors.groupingBy(Holding::getAssetType,
-                    Collectors.summingDouble(Holding::getCurrentValue)))
-            .forEach((type, value) -> {
-                double percentage = (value / totalAssets) * 100;
-                PieChart.Data assetData = new PieChart.Data(
-                    String.format("%s (%.1f%%)", type, percentage), 
-                    value
-                );
-                allocationChart.getData().add(assetData);
-                
-                // Eine Farbe aus unserer Palette anwenden, die durch die verfügbaren Farben zyklisch verläuft
-                int idx = colorIndex.getAndIncrement() % colors.length;
-                assetData.getNode().setStyle("-fx-pie-color: " + colors[idx] + ";");
-                
-                // Tooltip hinzufügen, um den genauen Wert anzuzeigen
-                Tooltip tooltip = new Tooltip(
-                    String.format("%s: %s", type, CURRENCY_FORMAT.format(value))
-                );
-                Tooltip.install(assetData.getNode(), tooltip);
-            });
+
+        // Group holdings by type and calculate total value by type
+        Map<AssetType, Double> assetTypeValues = data.stream()
+            .collect(Collectors.groupingBy(
+                Holding::getAssetType,
+                Collectors.summingDouble(Holding::getCurrentValue)
+            ));
+
+        // Create a list for sorting by value (largest first)
+        List<Map.Entry<AssetType, Double>> sortedEntries = new ArrayList<>(assetTypeValues.entrySet());
+        sortedEntries.sort(Map.Entry.<AssetType, Double>comparingByValue().reversed());
+
+        // Then add segments for each asset type with modern colors
+        for (Map.Entry<AssetType, Double> entry : sortedEntries) {
+            AssetType type = entry.getKey();
+            double value = entry.getValue();
+
+            // Skip if already covered (cash) or value is negligible
+            if (type == AssetType.CASH || value < 0.01) continue;
+
+            double percentage = (value / totalAssets) * 100;
+            PieChart.Data assetData = new PieChart.Data(
+                String.format("%s (%.1f%%)", type, percentage),
+                value
+            );
+            allocationChart.getData().add(assetData);
+
+            // Apply modern styling
+            if (assetData.getNode() != null) {
+                // Apply style class
+                assetData.getNode().getStyleClass().add(type.toString().toLowerCase() + "-slice");
+
+                // Apply color from our palette as a fallback
+                String color = colorMap.getOrDefault(type, "#4A5568"); // Default gray if type not in map
+                assetData.getNode().setStyle("-fx-pie-color: " + color + ";");
+            }
+
+            // Enhanced tooltip with better formatting
+            Tooltip tooltip = new Tooltip(
+                String.format("%s: %s (%.1f%%)",
+                    type,
+                    CURRENCY_FORMAT.format(value),
+                    percentage)
+            );
+            tooltip.setStyle("-fx-font-size: 12px;");
+            Tooltip.install(assetData.getNode(), tooltip);
+        }
+
+        // Apply final styling to the chart
+        allocationChart.setStartAngle(90);
+        allocationChart.setClockwise(true);
+        allocationChart.setLabelsVisible(false);
     }
     
     /**
@@ -549,6 +634,49 @@ public class MainController {
         colName.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().getName()));
         colType.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getAssetType()));
 
+        // Apply styling for dark mode compatibility
+        colSymbol.setCellFactory(col -> new TableCell<Holding, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    // Set light text for dark mode
+                    setStyle("-fx-text-fill: #F7FAFC;");
+                }
+            }
+        });
+
+        colName.setCellFactory(col -> new TableCell<Holding, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    // Set light text for dark mode
+                    setStyle("-fx-text-fill: #F7FAFC;");
+                }
+            }
+        });
+
+        colType.setCellFactory(col -> new TableCell<Holding, AssetType>() {
+            @Override
+            protected void updateItem(AssetType item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.toString());
+                    // Set light text for dark mode
+                    setStyle("-fx-text-fill: #F7FAFC;");
+                }
+            }
+        });
+
         // Quantity column with custom formatting
         colQty.setCellValueFactory(cellData -> new ReadOnlyObjectWrapper<>(cellData.getValue().getQuantity()));
         colQty.setCellFactory(col -> new TableCell<Holding, Double>() {
@@ -559,6 +687,7 @@ public class MainController {
                     setText(null);
                 } else {
                     setText(NUMBER_FORMAT.format(item));
+                    setStyle("-fx-text-fill: #F7FAFC;");
                 }
             }
         });
@@ -573,6 +702,7 @@ public class MainController {
                     setText(null);
                 } else {
                     setText(CURRENCY_FORMAT.format(item));
+                    setStyle("-fx-text-fill: #F7FAFC;");
                 }
             }
         });
@@ -587,6 +717,7 @@ public class MainController {
                     setText(null);
                 } else {
                     setText(CURRENCY_FORMAT.format(item));
+                    setStyle("-fx-text-fill: #F7FAFC;");
                 }
             }
         });
@@ -641,6 +772,20 @@ public class MainController {
         colValue.setCellValueFactory(cellData -> {
             double value = cellData.getValue().getCurrentValue();
             return new ReadOnlyStringWrapper(CURRENCY_FORMAT.format(value));
+        });
+
+        // Custom cell factory for text color in dark mode
+        colValue.setCellFactory(col -> new TableCell<Holding, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setStyle("-fx-text-fill: #F7FAFC;");
+                }
+            }
         });
         
         // Profit/Loss column
@@ -754,44 +899,48 @@ public class MainController {
         lblTotal.setText(CURRENCY_FORMAT.format(portfolio.getTotalValue()));
         lblCashBalance.setText(CURRENCY_FORMAT.format(portfolio.getCashBalance()));
         lblTotalAssets.setText(CURRENCY_FORMAT.format(portfolio.getTotalAssetValue()));
-        
+
         // Update profit/loss
         double profitLoss = portfolio.getProfitLoss();
         lblProfitLoss.setText(CURRENCY_FORMAT.format(profitLoss));
-        
-        // Color profit/loss based on value
+
+        // Apply style classes for profit/loss based on value
         if (profitLoss > 0) {
-            lblProfitLoss.setTextFill(Color.GREEN);
+            lblProfitLoss.getStyleClass().removeAll("label-negative");
+            lblProfitLoss.getStyleClass().add("label-positive");
         } else if (profitLoss < 0) {
-            lblProfitLoss.setTextFill(Color.RED);
+            lblProfitLoss.getStyleClass().removeAll("label-positive");
+            lblProfitLoss.getStyleClass().add("label-negative");
         } else {
-            lblProfitLoss.setTextFill(Color.BLACK);
+            lblProfitLoss.getStyleClass().removeAll("label-positive", "label-negative");
         }
-        
+
         // Update profit/loss percentage
         double profitLossPercent = portfolio.getProfitLossPercentage() / 100; // Convert to decimal for formatter
         lblProfitLossPercent.setText(PERCENT_FORMAT.format(profitLossPercent));
-        
-        // Color percentage same as the monetary value
+
+        // Apply style classes for percentage same as the monetary value
         if (profitLossPercent > 0) {
-            lblProfitLossPercent.setTextFill(Color.GREEN);
+            lblProfitLossPercent.getStyleClass().removeAll("label-negative");
+            lblProfitLossPercent.getStyleClass().add("label-positive");
         } else if (profitLossPercent < 0) {
-            lblProfitLossPercent.setTextFill(Color.RED);
+            lblProfitLossPercent.getStyleClass().removeAll("label-positive");
+            lblProfitLossPercent.getStyleClass().add("label-negative");
         } else {
-            lblProfitLossPercent.setTextFill(Color.BLACK);
+            lblProfitLossPercent.getStyleClass().removeAll("label-positive", "label-negative");
         }
-        
+
         // Take a new snapshot for the charts
         portfolio.takeSnapshot();
-        
+
         // Update charts
         updateMiniChart();
         updateAllocationChart();
         initializeAssetBreakdownChart(); // Reinitialize with new data
-        
+
         // Update status
         lblStatus.setText("Portfolio has " + data.size() + " holdings");
-        
+
         // Update last update time
         updateLastUpdateTime();
     }
@@ -843,7 +992,7 @@ public class MainController {
     }
 
     /**
-     * Shows detailed chart for the selected holding
+     * Shows detailed chart for the selected holding with modern styling
      */
     @FXML
     private void showDetailedChart() {
@@ -852,93 +1001,196 @@ public class MainController {
             showInformationAlert("No Selection", "Please select a holding to view its detailed chart.");
             return;
         }
-        
+
         // Create a new stage for the detailed chart
         Stage stage = new Stage(StageStyle.DECORATED);
         stage.setTitle(selectedHolding.getSymbol() + " - Price History");
         stage.initModality(Modality.APPLICATION_MODAL);
-        
-        // Create axes
+
+        // Create chart container with card styling
+        VBox chartContainer = new VBox();
+        chartContainer.getStyleClass().add("card");
+        chartContainer.setPadding(new Insets(20));
+        chartContainer.setSpacing(20);
+
+        // Add title
+        Label titleLabel = new Label("Price History for " + selectedHolding.getName());
+        titleLabel.getStyleClass().add("label-header");
+
+        // Add subtitle with holding type and symbol
+        Label subtitleLabel = new Label(selectedHolding.getAssetType() + " • " + selectedHolding.getSymbol());
+        subtitleLabel.getStyleClass().add("label-subheader");
+
+        // Create axes with improved styling
         NumberAxis xAxis = new NumberAxis();
         xAxis.setLabel("Time Points");
-        
+        xAxis.setTickLabelFill(Color.valueOf("#4A5568"));
+        xAxis.setTickLabelGap(10);
+
         NumberAxis yAxis = new NumberAxis();
         yAxis.setLabel("Price (" + CURRENCY_FORMAT.getCurrency().getSymbol() + ")");
-        
-        // Create chart
+        yAxis.setTickLabelFill(Color.valueOf("#4A5568"));
+
+        // Create chart with modern styling
         LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("Price History for " + selectedHolding.getName());
-        
-        // Create series
+        lineChart.setLegendVisible(false);
+        lineChart.setCreateSymbols(true);
+        lineChart.setAnimated(false);
+        lineChart.getStyleClass().add("modern-chart");
+        lineChart.setPrefHeight(350);
+
+        // Create series with appropriate coloring
         XYChart.Series<Number, Number> series = new XYChart.Series<>();
         series.setName("Price");
-        
+
         // Add data points
         List<Holding.PricePoint> history = selectedHolding.getPriceHistory();
         for (int i = 0; i < history.size(); i++) {
             series.getData().add(new XYChart.Data<>(i, history.get(i).getPrice()));
         }
-        
+
+        // Get first and last prices to determine trend
+        double firstPrice = history.isEmpty() ? 0 : history.get(0).getPrice();
+        double lastPrice = history.isEmpty() ? 0 : history.get(history.size() - 1).getPrice();
+        boolean isPositiveTrend = lastPrice >= firstPrice;
+
         // Add series to chart
         lineChart.getData().add(series);
-        
-        // Create layout
-        BorderPane root = new BorderPane(lineChart);
-        
-        // Add information
-        GridPane infoGrid = new GridPane();
-        infoGrid.setHgap(10);
-        infoGrid.setVgap(5);
-        infoGrid.setPadding(new Insets(10));
-        
-        // Add purchase info
-        infoGrid.add(new Label("Purchase Price:"), 0, 0);
-        infoGrid.add(new Label(CURRENCY_FORMAT.format(selectedHolding.getPurchasePricePerUnit())), 1, 0);
-        
-        infoGrid.add(new Label("Current Price:"), 0, 1);
-        infoGrid.add(new Label(CURRENCY_FORMAT.format(selectedHolding.getPricePerUnit())), 1, 1);
-        
-        infoGrid.add(new Label("Price Change:"), 0, 2);
-        Label priceChangeLabel = new Label(CURRENCY_FORMAT.format(selectedHolding.getPriceChange()) + 
-                " (" + PERCENT_FORMAT.format(selectedHolding.getPriceChangePercentage() / 100) + ")");
-        if (selectedHolding.getPriceChange() > 0) {
-            priceChangeLabel.setTextFill(Color.GREEN);
-        } else if (selectedHolding.getPriceChange() < 0) {
-            priceChangeLabel.setTextFill(Color.RED);
+
+        // Apply styling to the line based on trend
+        if (series.getNode() != null) {
+            if (isPositiveTrend) {
+                series.getNode().setStyle("-fx-stroke: #4ECB71; -fx-stroke-width: 2px;"); // Green for positive
+            } else {
+                series.getNode().setStyle("-fx-stroke: #EA5455; -fx-stroke-width: 2px;"); // Red for negative
+            }
         }
-        infoGrid.add(priceChangeLabel, 1, 2);
-        
-        infoGrid.add(new Label("Quantity:"), 0, 3);
-        infoGrid.add(new Label(NUMBER_FORMAT.format(selectedHolding.getQuantity())), 1, 3);
-        
-        infoGrid.add(new Label("Total Value:"), 0, 4);
-        infoGrid.add(new Label(CURRENCY_FORMAT.format(selectedHolding.getCurrentValue())), 1, 4);
-        
-        infoGrid.add(new Label("Profit/Loss:"), 0, 5);
-        Label profitLossLabel = new Label(CURRENCY_FORMAT.format(selectedHolding.getProfitLoss()));
-        if (selectedHolding.getProfitLoss() > 0) {
-            profitLossLabel.setTextFill(Color.GREEN);
-        } else if (selectedHolding.getProfitLoss() < 0) {
-            profitLossLabel.setTextFill(Color.RED);
+
+        // Apply styling to data points
+        for (XYChart.Data<Number, Number> data : series.getData()) {
+            if (data.getNode() != null) {
+                if (isPositiveTrend) {
+                    data.getNode().setStyle("-fx-background-color: #4ECB71, white; -fx-background-radius: 6px; -fx-padding: 5px;");
+                } else {
+                    data.getNode().setStyle("-fx-background-color: #EA5455, white; -fx-background-radius: 6px; -fx-padding: 5px;");
+                }
+
+                // Add tooltip for each data point
+                int index = series.getData().indexOf(data);
+                if (index < history.size()) {
+                    Holding.PricePoint point = history.get(index);
+                    Tooltip tooltip = new Tooltip(
+                        String.format("Time: %s\nPrice: %s",
+                            point.getTimestamp().format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+                            CURRENCY_FORMAT.format(point.getPrice()))
+                    );
+                    Tooltip.install(data.getNode(), tooltip);
+                }
+            }
         }
-        infoGrid.add(profitLossLabel, 1, 5);
-        
-        // Add button to close
+
+        // Create metrics summary cards
+        HBox metricsContainer = new HBox();
+        metricsContainer.setSpacing(16);
+        metricsContainer.setAlignment(javafx.geometry.Pos.CENTER);
+
+        // Card for purchase price
+        VBox purchaseCard = createMetricCard(
+            "Purchase Price",
+            CURRENCY_FORMAT.format(selectedHolding.getPurchasePricePerUnit()),
+            null
+        );
+
+        // Card for current price
+        VBox currentPriceCard = createMetricCard(
+            "Current Price",
+            CURRENCY_FORMAT.format(selectedHolding.getPricePerUnit()),
+            null
+        );
+
+        // Card for price change with appropriate color
+        String priceChangeStr = CURRENCY_FORMAT.format(selectedHolding.getPriceChange()) +
+                " (" + PERCENT_FORMAT.format(selectedHolding.getPriceChangePercentage() / 100) + ")";
+        VBox priceChangeCard = createMetricCard(
+            "Price Change",
+            priceChangeStr,
+            selectedHolding.getPriceChange() > 0 ? "label-positive" :
+                (selectedHolding.getPriceChange() < 0 ? "label-negative" : null)
+        );
+
+        // Card for total value
+        VBox valueCard = createMetricCard(
+            "Total Value",
+            CURRENCY_FORMAT.format(selectedHolding.getCurrentValue()),
+            null
+        );
+
+        // Card for profit/loss with appropriate color
+        VBox profitLossCard = createMetricCard(
+            "Profit/Loss",
+            CURRENCY_FORMAT.format(selectedHolding.getProfitLoss()),
+            selectedHolding.getProfitLoss() > 0 ? "label-positive" :
+                (selectedHolding.getProfitLoss() < 0 ? "label-negative" : null)
+        );
+
+        // Add all cards to metrics container
+        metricsContainer.getChildren().addAll(
+            purchaseCard, currentPriceCard, priceChangeCard, valueCard, profitLossCard
+        );
+
+        // Add button to close with better styling
         Button closeButton = new Button("Close");
+        closeButton.getStyleClass().add("button-primary");
         closeButton.setOnAction(e -> stage.close());
-        
+
         HBox buttonBox = new HBox(closeButton);
-        buttonBox.setPadding(new Insets(10));
+        buttonBox.setPadding(new Insets(10, 0, 0, 0));
         buttonBox.setAlignment(javafx.geometry.Pos.CENTER);
-        
-        // Combine components
-        VBox bottomBox = new VBox(infoGrid, buttonBox);
-        root.setBottom(bottomBox);
-        
-        // Show the chart
-        Scene scene = new Scene(root, 800, 600);
+
+        // Combine all components
+        chartContainer.getChildren().addAll(
+            titleLabel,
+            subtitleLabel,
+            lineChart,
+            metricsContainer,
+            buttonBox
+        );
+
+        // Create layout with padding
+        BorderPane root = new BorderPane();
+        root.setPadding(new Insets(20));
+        root.setCenter(chartContainer);
+
+        // Show the chart with CSS applied
+        Scene scene = new Scene(root, 900, 650);
+        scene.getStylesheets().add(getClass().getResource("/com/investtrack/view/ModernStyle.css").toExternalForm());
         stage.setScene(scene);
         stage.show();
+    }
+
+    /**
+     * Helper method to create a metric card for the detailed chart view
+     */
+    private VBox createMetricCard(String title, String value, String valueStyleClass) {
+        VBox card = new VBox(5);
+        card.getStyleClass().addAll("card", "metric-card");
+        card.setPadding(new Insets(16));
+        card.setAlignment(javafx.geometry.Pos.CENTER);
+        card.setMinWidth(150);
+
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("label-subheader");
+
+        Label valueLabel = new Label(value);
+        valueLabel.getStyleClass().add("label-value");
+
+        // Add additional style class if provided
+        if (valueStyleClass != null) {
+            valueLabel.getStyleClass().add(valueStyleClass);
+        }
+
+        card.getChildren().addAll(titleLabel, valueLabel);
+        return card;
     }
     
     /**
@@ -1676,6 +1928,14 @@ public class MainController {
     }
     
     /**
+     * Theme toggle functionality (removed)
+     */
+    @FXML
+    private void toggleTheme() {
+        // Theme functionality removed
+    }
+
+    /**
      * Zeigt einen Fehler-Dialog an.
      */
     private void showErrorAlert(String title, String header, String content) {
@@ -1685,7 +1945,7 @@ public class MainController {
         alert.setContentText(content);
         alert.showAndWait();
     }
-    
+
     /**
      * Shows an informational alert with the given title and message.
      */
